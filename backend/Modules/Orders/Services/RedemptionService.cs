@@ -45,9 +45,10 @@ public class RedemptionService : IRedemptionService
     public async Task<TicketResponse> RedeemAsync(Guid orderId, Guid userId, CancellationToken ct)
     {
         var order = await _context.Orders
-            .Include(o => o.Items)
+            .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
+        // Fast, clear errors for the common cases.
         if (order is null || order.UserId != userId)
             throw new NotFoundException("Order not found.");
 
@@ -62,13 +63,27 @@ public class RedemptionService : IRedemptionService
             throw new ConflictException("Order is not paid.");
 
         var now = _clock.GetUtcNow().UtcDateTime;
-        order.Status = OrderStatus.Redeemed;
-        order.RedeemedAt = now;
-        order.UpdatedAt = now;
 
-        await _context.SaveChangesAsync(ct);
+        // Race-safe: a single atomic UPDATE ... WHERE Status = 'Paid'. Of two concurrent
+        // redeems only one touches a row; the other gets 0 rows affected.
+        var affected = await _context.Orders
+            .Where(o => o.Id == orderId && o.Status == OrderStatus.Paid)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.Status, OrderStatus.Redeemed)
+                .SetProperty(o => o.RedeemedAt, now)
+                .SetProperty(o => o.UpdatedAt, now), ct);
 
-        return ToTicket(order);
+        var fresh = await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Items)
+            .FirstAsync(o => o.Id == orderId, ct);
+
+        if (affected == 0)
+            // Someone redeemed it between the check above and here.
+            throw new ConflictException(
+                $"Ticket already redeemed at {fresh.RedeemedAt:yyyy-MM-dd HH:mm} UTC.");
+
+        return ToTicket(fresh);
     }
 
     private TicketResponse ToTicket(Order order) => new(

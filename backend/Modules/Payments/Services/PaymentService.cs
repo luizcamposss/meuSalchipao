@@ -45,50 +45,63 @@ public class PaymentService : IPaymentService
                 && p.Status == PaymentStatus.Pending
                 && p.ExpiresAt > now.UtcDateTime, ct);
 
-        if (existing is not null)
+        if (existing is { ExternalId: not null })
             return Map(existing);
 
-        var phase = await _events.GetSnapshotAsync(ct);
-        if (!phase.SalesOpen)
-            throw new ConflictException("Sales are closed.");
+        Payment payment;
 
-        var ttlExpiry = now.AddMinutes(PixTtlMinutes);
-        var cutoff = new DateTimeOffset(phase.SalesCloseAt, TimeSpan.Zero);
-        var expiresAt = ttlExpiry < cutoff ? ttlExpiry : cutoff;
+        if (existing is not null)
+        {
+            payment = existing;
+        }
+        else
+        {
+            var phase = await _events.GetSnapshotAsync(ct);
+            if (!phase.SalesOpen)
+                throw new ConflictException("Sales are closed.");
+
+            var ttlExpiry = now.AddMinutes(PixTtlMinutes);
+            var cutoff = new DateTimeOffset(phase.SalesCloseAt, TimeSpan.Zero);
+            var expiresAt = ttlExpiry < cutoff ? ttlExpiry : cutoff;
+
+            payment = new Payment
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                Provider = "mercadopago",
+                ExternalId = null,
+                Status = PaymentStatus.Pending,
+                Amount = order.Total,
+                ExpiresAt = expiresAt.UtcDateTime,
+                CreatedAt = now.UtcDateTime,
+                UpdatedAt = now.UtcDateTime,
+            };
+            _context.Add(payment);
+            await _context.SaveChangesAsync(ct);
+        }
 
         var user = await _context.Users.FirstAsync(u => u.Id == userId, ct);
 
-        var paymentId = Guid.NewGuid();
-
         var request = new CreatePixPaymentRequest(
-            TransactionAmount: order.Total,
+            TransactionAmount: payment.Amount,
             PaymentMethodId: "pix",
             Description: $"Pedido {order.Id}",
             ExternalReference: order.Id.ToString(),
             NotificationUrl: $"{_config["MercadoPago:NotificationBaseUrl"]}/webhooks/mercadopago",
-            DateOfExpiration: expiresAt.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
+            DateOfExpiration: new DateTimeOffset(payment.ExpiresAt, TimeSpan.Zero)
+                .ToString("yyyy-MM-ddTHH:mm:ss.fffzzz"),
             Payer: new MpPayer(user.Email, user.Name));
 
-        var mpPayment = await _mp.CreatePixPaymentAsync(request, paymentId.ToString(), ct);
+        var mpPayment = await _mp.CreatePixPaymentAsync(request, payment.Id.ToString(), ct);
         var data = mpPayment.PointOfInteraction?.TransactionData;
 
-        var payment = new Payment
-        {
-            Id = paymentId,
-            OrderId = order.Id,
-            Provider = "mercadopago",
-            ExternalId = mpPayment.Id.ToString(),
-            Status = MercadoPagoStatusMap.ToPaymentStatus(mpPayment.Status),
-            StatusDetail = mpPayment.StatusDetail,
-            Amount = order.Total,
-            PixCode = data?.QrCode,
-            PixQrCodeBase64 = data?.QrCodeBase64,
-            ExpiresAt = expiresAt.UtcDateTime,
-            CreatedAt = now.UtcDateTime,
-            UpdatedAt = now.UtcDateTime,
-        };
+        payment.ExternalId = mpPayment.Id.ToString();
+        payment.Status = MercadoPagoStatusMap.ToPaymentStatus(mpPayment.Status);
+        payment.StatusDetail = mpPayment.StatusDetail;
+        payment.PixCode = data?.QrCode;
+        payment.PixQrCodeBase64 = data?.QrCodeBase64;
+        payment.UpdatedAt = _clock.GetUtcNow().UtcDateTime;
 
-        _context.Add(payment);
         await _context.SaveChangesAsync(ct);
 
         return Map(payment);
@@ -120,11 +133,9 @@ public class PaymentService : IPaymentService
     public async Task HandlePaymentNotificationAsync(
         string dataId, string notificationId, string? action, CancellationToken ct)
     {
-        // Idempotency: MP retries the same notification. If we already recorded it, stop.
         if (await _context.PaymentWebhookEvents.AnyAsync(e => e.EventId == notificationId, ct))
             return;
 
-        // Authoritative status — the webhook body never carries it.
         var mpPayment = await _mp.GetPaymentAsync(dataId, ct);
         var now = _clock.GetUtcNow().UtcDateTime;
         var newStatus = MercadoPagoStatusMap.ToPaymentStatus(mpPayment.Status);
@@ -147,7 +158,7 @@ public class PaymentService : IPaymentService
                 if (newStatus == PaymentStatus.Approved)
                 {
                     order.PaymentStatus = PaymentStatus.Approved;
-                    order.Status = OrderStatus.Paid;          // ticket becomes valid
+                    order.Status = OrderStatus.Paid;
                     order.UpdatedAt = now;
                 }
                 else if (newStatus is PaymentStatus.Rejected or PaymentStatus.Expired)
@@ -156,14 +167,10 @@ public class PaymentService : IPaymentService
                     order.Status = OrderStatus.Cancelled;
                     order.UpdatedAt = now;
                 }
-                // pending / in_process -> leave the order awaiting
             }
             else if (newStatus == PaymentStatus.Approved
                      && order.Status is not (OrderStatus.Paid or OrderStatus.Redeemed))
             {
-                // approved landed on a Cancelled order (sales cutoff). "Pagou não volta" —
-                // Staff resolves this by hand. Just leave a trail.
-                // TODO(M8): structured alert log
             }
         }
 
@@ -178,12 +185,10 @@ public class PaymentService : IPaymentService
 
         try
         {
-            await _context.SaveChangesAsync(ct);   // payment + order + event, one transaction
+            await _context.SaveChangesAsync(ct);
         }
         catch (DbUpdateException ex) when (ex.InnerException is MySqlConnector.MySqlException { Number: 1062 })
         {
-            // A concurrent retry recorded the same notification first. Its work is
-            // identical to ours (idempotent status writes), so this is fine.
         }
     }
 }

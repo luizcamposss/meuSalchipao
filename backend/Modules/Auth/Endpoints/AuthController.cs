@@ -3,6 +3,7 @@ using backend.Modules.Auth.Contracts;
 using backend.Modules.Auth.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace backend.Modules.Auth.Endpoints;
 
@@ -10,6 +11,7 @@ namespace backend.Modules.Auth.Endpoints;
 [Route("auth")]
 public class AuthController(IAuthService authService, IHostEnvironment env) : ControllerBase
 {
+    [EnableRateLimiting("auth")]
     [HttpPost("register")]
     public async Task<ActionResult<RegisterResponse>> Register(RegisterRequest request, CancellationToken ct)
     {
@@ -17,6 +19,7 @@ public class AuthController(IAuthService authService, IHostEnvironment env) : Co
         return Created($"/auth/users/{user.Id}", user);
     }
 
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken ct)
     {
