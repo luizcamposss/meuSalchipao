@@ -1,4 +1,4 @@
-# meu-salchipão
+# Meu Salchipão
 
 Internal system for the **Semana Farroupilha** school event: students and staff register,
 order the Salchipão snack, pay by Pix through Mercado Pago in-app, and get a digital ticket
