@@ -56,6 +56,19 @@ public class AuthController(IAuthService authService, IHostEnvironment env) : Co
             return Problem(statusCode: StatusCodes.Status401Unauthorized, title: ex.Message);
         }
     }
+    
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        if (Request.Cookies.TryGetValue("refresh_token", out var refreshToken)
+            && !string.IsNullOrEmpty(refreshToken))
+        {
+            await authService.LogoutAsync(refreshToken, ct);
+        }
+
+        ClearAuthCookies();
+        return NoContent();
+    }
 
     private void SetAuthCookies(string accessToken, string refreshToken)
     {

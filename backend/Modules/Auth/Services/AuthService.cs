@@ -142,6 +142,20 @@ public class AuthService : IAuthService
         return new LoginResult(accessToken, newRefreshToken, _mapper.Map<LoginResponse>(session.User));
     }
 
+    public async Task LogoutAsync(string refreshToken, CancellationToken ct)
+    {
+        var hash = HashToken(refreshToken);
+
+        var session = await _context.Sessions
+            .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
+
+        if (session is null)
+            return;
+
+        _context.Sessions.Remove(session);
+        await _context.SaveChangesAsync(ct);
+    }
+
     private static string GenerateRefreshToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);
