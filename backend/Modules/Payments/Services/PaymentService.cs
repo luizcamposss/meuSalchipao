@@ -116,4 +116,74 @@ public class PaymentService : IPaymentService
 
     private static PaymentResponse Map(Payment p) => new(
         p.Id, p.Status, p.PixCode, p.PixQrCodeBase64, p.ExpiresAt, p.Amount);
+
+    public async Task HandlePaymentNotificationAsync(
+        string dataId, string notificationId, string? action, CancellationToken ct)
+    {
+        // Idempotency: MP retries the same notification. If we already recorded it, stop.
+        if (await _context.PaymentWebhookEvents.AnyAsync(e => e.EventId == notificationId, ct))
+            return;
+
+        // Authoritative status — the webhook body never carries it.
+        var mpPayment = await _mp.GetPaymentAsync(dataId, ct);
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var newStatus = MercadoPagoStatusMap.ToPaymentStatus(mpPayment.Status);
+
+        var payment = await _context.Payments.FirstOrDefaultAsync(p => p.ExternalId == dataId, ct);
+
+        if (payment is not null)
+        {
+            payment.Status = newStatus;
+            payment.StatusDetail = mpPayment.StatusDetail;
+            payment.LastWebhookAt = now;
+            payment.UpdatedAt = now;
+            if (newStatus == PaymentStatus.Approved && payment.ApprovedAt is null)
+                payment.ApprovedAt = mpPayment.DateApproved?.UtcDateTime ?? now;
+
+            var order = await _context.Orders.FirstAsync(o => o.Id == payment.OrderId, ct);
+
+            if (order.Status == OrderStatus.AwaitingPayment)
+            {
+                if (newStatus == PaymentStatus.Approved)
+                {
+                    order.PaymentStatus = PaymentStatus.Approved;
+                    order.Status = OrderStatus.Paid;          // ticket becomes valid
+                    order.UpdatedAt = now;
+                }
+                else if (newStatus is PaymentStatus.Rejected or PaymentStatus.Expired)
+                {
+                    order.PaymentStatus = newStatus;
+                    order.Status = OrderStatus.Cancelled;
+                    order.UpdatedAt = now;
+                }
+                // pending / in_process -> leave the order awaiting
+            }
+            else if (newStatus == PaymentStatus.Approved
+                     && order.Status is not (OrderStatus.Paid or OrderStatus.Redeemed))
+            {
+                // approved landed on a Cancelled order (sales cutoff). "Pagou não volta" —
+                // Staff resolves this by hand. Just leave a trail.
+                // TODO(M8): structured alert log
+            }
+        }
+
+        _context.Add(new PaymentWebhookEvent
+        {
+            Id = Guid.NewGuid(),
+            EventId = notificationId,
+            PaymentId = dataId,
+            Action = action ?? string.Empty,
+            ProcessedAt = now,
+        });
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);   // payment + order + event, one transaction
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is MySqlConnector.MySqlException { Number: 1062 })
+        {
+            // A concurrent retry recorded the same notification first. Its work is
+            // identical to ours (idempotent status writes), so this is fine.
+        }
+    }
 }
