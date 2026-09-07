@@ -3,6 +3,7 @@ using backend.Modules.Payments.Contracts;
 using backend.Modules.Payments.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace backend.Modules.Payments.Endpoints;
 
@@ -11,6 +12,7 @@ namespace backend.Modules.Payments.Endpoints;
 public class PaymentController(IPaymentService payments) : ControllerBase
 {
     // Create (or return the live) Pix charge for an order.
+    [EnableRateLimiting("payment")]
     [HttpPost("orders/{orderId:guid}/payment")]
     public async Task<ActionResult<PaymentResponse>> Create(Guid orderId, CancellationToken ct)
     {

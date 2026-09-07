@@ -15,5 +15,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=meuSalchipao;Port=3306;Database=${DB_NAME};User=${DB_USER};Password=${DB_USER_PASSWORD};"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    ports:
+      - ${API_PORT:-5029}:8080
+    depends_on:
+      meuSalchipao:
+        condition: service_healthy
+
 volumes:
   meuSalchipao_data: {}
