@@ -75,8 +75,14 @@ module. Highlights:
 - **EF Core Code-First**: C# models are the source of truth; the DB diagram
   (`~/Downloads/meu-salchipao-diagramDB.png`) is a guide, not the schema.
 - **Auth**: JWT in an `HttpOnly` cookie (short-lived access token) + opaque refresh token
-  stored hashed (SHA-256) in the `sessions` table, rotated on refresh. Antiforgery for CSRF.
-  The `JwtBearer` handler reads the token from the cookie, not the `Authorization` header.
+  stored hashed (SHA-256) in the `sessions` table, rotated on refresh. The `JwtBearer`
+  handler reads the token from the cookie, not the `Authorization` header.
+- **CSRF**: covered by `SameSite=Lax` cookies + a strict CORS allowlist
+  (`Cors:AllowedOrigins`, `AllowCredentials`). No antiforgery token flow — decided against it
+  for this app's scope; revisit if a security review calls for defense-in-depth.
+- **Rate limiting**: `AddRateLimiter` policies — `auth` (10/min per IP on login+register),
+  `payment` (5/min per user on Pix charge creation). Behind a proxy, wire `UseForwardedHeaders`
+  so `RemoteIpAddress` is the real client.
 - **Roles**: `Role` enum on `User` (`Student` / `Staff`); `shift` is required (`NOT NULL`).
 - **Payments**: Mercado Pago Pix transparent checkout. Webhook is signature-verified and
   idempotent (`payment_webhook_events`); status is always re-fetched from MP, never trusted
