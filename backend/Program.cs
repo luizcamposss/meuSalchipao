@@ -6,6 +6,7 @@ using backend.Modules.Auth.Services;
 using backend.Modules.Catalog.Services;
 using backend.Modules.Event.Services;
 using backend.Modules.Orders.Services;
+using backend.Modules.Payments.BackgroundJobs;
 using backend.Modules.Payments.Gateway;
 using backend.Modules.Payments.Services;
 using backend.Shared.Exceptions;
@@ -50,6 +51,7 @@ builder.Services.AddScoped<IEventPhaseService, EventPhaseService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<MercadoPagoSignatureValidator>();
+builder.Services.AddHostedService<SalesCutoffWorker>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
