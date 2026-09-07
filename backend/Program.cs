@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text;
 using backend.Modules.Auth.Domain;
 using backend.Modules.Auth.Mapping;
@@ -5,6 +6,9 @@ using backend.Modules.Auth.Services;
 using backend.Modules.Catalog.Services;
 using backend.Modules.Event.Services;
 using backend.Modules.Orders.Services;
+using backend.Modules.Payments.BackgroundJobs;
+using backend.Modules.Payments.Gateway;
+using backend.Modules.Payments.Services;
 using backend.Shared.Exceptions;
 using backend.Shared.Persistence;
 using DotNetEnv;
@@ -45,8 +49,19 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IEventPhaseService, EventPhaseService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<MercadoPagoSignatureValidator>();
+builder.Services.AddHostedService<SalesCutoffWorker>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+
+builder.Services.AddHttpClient<MercadoPagoClient>(c =>
+{
+    c.BaseAddress = new Uri("https://api.mercadopago.com");
+    c.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue("Bearer", builder.Configuration["MercadoPago:AccessToken"]);
+})
+.AddStandardResilienceHandler();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

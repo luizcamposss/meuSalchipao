@@ -13,6 +13,8 @@ public class GlobalExceptionHandler : IExceptionHandler
             ConflictException => StatusCodes.Status409Conflict,
             ValidationException => StatusCodes.Status400BadRequest,
             AuthenticationException => StatusCodes.Status401Unauthorized,
+            NotFoundException => StatusCodes.Status404NotFound,
+            MercadoPagoException => StatusCodes.Status502BadGateway,
             _ => 0,
         };
 
