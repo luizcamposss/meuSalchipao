@@ -1,6 +1,11 @@
+using backend.Modules.Auth.Domain;
+using backend.Modules.Auth.Mapping;
+using backend.Modules.Auth.Services;
 using backend.Shared.Persistence;
-using DotNetEnv;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using DotNetEnv;
+using backend.Shared.Exceptions;
 
 Env.Load();
 
@@ -19,11 +24,20 @@ builder.Services.AddDbContext<AppDbContext>(opts =>
         new MySqlServerVersion(new Version(8, 4, 0))
     ));
 
-
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddAutoMapper(
+    cfg => cfg.AddMaps(
+        typeof(AuthMappingProfile).Assembly)
+    );
+
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
 var app = builder.Build();
 
