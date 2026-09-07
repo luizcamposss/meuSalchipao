@@ -4,6 +4,7 @@ using backend.Modules.Auth.Mapping;
 using backend.Modules.Auth.Services;
 using backend.Modules.Catalog.Services;
 using backend.Modules.Event.Services;
+using backend.Modules.Orders.Services;
 using backend.Shared.Exceptions;
 using backend.Shared.Persistence;
 using DotNetEnv;
@@ -43,6 +44,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IEventPhaseService, EventPhaseService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
