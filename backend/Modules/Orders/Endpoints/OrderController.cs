@@ -9,7 +9,7 @@ namespace backend.Modules.Orders.Endpoints;
 [ApiController]
 [Route("orders")]
 [Authorize]
-public class OrderController(IOrderService orders) : ControllerBase
+public class OrderController(IOrderService orders, IRedemptionService redemption) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<OrderResponse>> Create(CreateOrderRequest request, CancellationToken ct)
@@ -31,6 +31,18 @@ public class OrderController(IOrderService orders) : ControllerBase
         return order is null ? NotFound() : Ok(order);
     }
 
+    [HttpGet("{id:guid}/ticket")]
+    public async Task<ActionResult<TicketResponse>> Ticket(Guid id, CancellationToken ct)
+    {
+        var ticket = await redemption.GetTicketAsync(id, CurrentUserId, IsStaff, ct);
+        return ticket is null ? NotFound() : Ok(ticket);
+    }
+
+    [HttpPost("{id:guid}/redeem")]
+    public async Task<ActionResult<TicketResponse>> Redeem(Guid id, CancellationToken ct)
+    {
+        return Ok(await redemption.RedeemAsync(id, CurrentUserId, ct));  
+    }
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue("sub")!);
     private bool IsStaff => User.IsInRole("Staff");
 }
