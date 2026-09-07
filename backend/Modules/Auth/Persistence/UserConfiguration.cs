@@ -10,35 +10,35 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.ToTable("users");
 
-        builder.HasKey(x => x.Id);
+        builder.HasKey(u => u.Id);
 
-        builder.Property(x => x.Name)
+        builder.Property(u => u.Name)
             .IsRequired()
             .HasMaxLength(100);
 
-        builder.Property(x => x.Email)
+        builder.Property(u => u.Email)
             .IsRequired()
             .HasMaxLength(191);
 
-        builder.HasIndex(x => x.Email)
+        builder.HasIndex(u => u.Email)
             .IsUnique();
 
-        builder.Property(x => x.Enrollment)
+        builder.Property(u => u.Enrollment)
             .IsRequired()
             .HasMaxLength(8);
 
-        builder.HasIndex(x => x.Enrollment)
+        builder.HasIndex(u => u.Enrollment)
             .IsUnique();
 
-        builder.Property(x => x.Shift)
+        builder.Property(u => u.Shift)
             .HasConversion<string>()
             .HasMaxLength(20);
 
-        builder.Property(x => x.Role)
+        builder.Property(u => u.Role)
                 .HasConversion<string>()
                 .HasMaxLength(20);
 
-        builder.Property(x => x.PasswordHash)
+        builder.Property(u => u.PasswordHash)
             .IsRequired()
             .HasMaxLength(255);
     }

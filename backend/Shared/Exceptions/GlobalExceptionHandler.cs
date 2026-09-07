@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Authentication;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Shared.Exceptions;
-
 public class GlobalExceptionHandler : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext ctx, Exception ex, CancellationToken ct)
@@ -12,16 +12,17 @@ public class GlobalExceptionHandler : IExceptionHandler
         {
             ConflictException => StatusCodes.Status409Conflict,
             ValidationException => StatusCodes.Status400BadRequest,
-            _ => 0
+            AuthenticationException => StatusCodes.Status401Unauthorized,
+            _ => 0,
         };
 
-        if(status is 0) return false;
+        if (status is 0) return false;
 
         ctx.Response.StatusCode = status;
         await ctx.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = status,
-            Title = ex.Message
+            Title = ex.Message,
         }, ct);
         return true;
     }

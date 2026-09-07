@@ -5,4 +5,6 @@ namespace backend.Modules.Auth.Services;
 public interface IAuthService
 {
     Task<RegisterResponse> RegisterAsync(RegisterRequest registerRequest, CancellationToken ct);
+
+    Task<LoginResult> LoginAsync(LoginRequest loginRequest, CancellationToken ct);
 }
