@@ -1,0 +1,92 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/*
+  meu-salchipão — tema Farroupilha, só claro.
+  Tokens no padrão shadcn/ui (v4): as variáveis cruas ficam em :root,
+  e o bloco @theme as expõe como utilitários do Tailwind (bg-background,
+  text-foreground, border-border, rounded-lg, font-sans, ...).
+*/
+
+:root {
+  --radius: 0.75rem;
+
+  /* superfícies */
+  --background: oklch(0.98 0.008 95); /* off-white morno */
+  --foreground: oklch(0.26 0.02 155); /* verde-carvão */
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  /* marca — verde do pampa */
+  --primary: oklch(0.48 0.09 155);
+  --primary-foreground: oklch(0.99 0.01 95);
+
+  /* apoio — area/palha */
+  --secondary: oklch(0.94 0.03 85);
+  --secondary-foreground: oklch(0.32 0.04 150);
+  --muted: oklch(0.96 0.012 95);
+  --muted-foreground: oklch(0.52 0.02 150);
+  --accent: oklch(0.9 0.05 80); /* telha suave */
+  --accent-foreground: oklch(0.32 0.06 60);
+
+  /* estados */
+  --destructive: oklch(0.58 0.19 25);
+  --destructive-foreground: oklch(0.99 0.01 95);
+
+  /* traços */
+  --border: oklch(0.9 0.012 95);
+  --input: oklch(0.9 0.012 95);
+  --ring: oklch(0.48 0.09 155);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
