@@ -112,6 +112,36 @@ public class AuthService : IAuthService
         return new LoginResult(accessToken, refreshToken, _mapper.Map<LoginResponse>(user));
     }
 
+    public async Task<LoginResult> RefreshAsync(string refreshToken, CancellationToken ct)
+    {
+        var hash = HashToken(refreshToken);
+
+        var session = await _context.Sessions
+            .Include(s => s.User)
+            .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
+
+        if (session is null || session.ExpiresAt <= DateTime.UtcNow || !session.User.Active)
+            throw new AuthenticationException("Invalid or expired session.");
+
+        var newRefreshToken = GenerateRefreshToken();
+
+        _context.Sessions.Remove(session);
+        _context.Add(new Session
+        {
+            Id = Guid.NewGuid(),
+            UserId = session.UserId,
+            TokenHash = HashToken(newRefreshToken),
+            CreatedAt = DateTime.UtcNow,
+            LastUsedAt = DateTime.UtcNow,
+            ExpiresAt = session.ExpiresAt,
+        });
+        await _context.SaveChangesAsync(ct);
+
+        var accessToken = _jwt.CreateAccessToken(session.User);
+
+        return new LoginResult(accessToken, newRefreshToken, _mapper.Map<LoginResponse>(session.User));
+    }
+
     private static string GenerateRefreshToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);

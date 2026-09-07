@@ -22,7 +22,6 @@ public class JwtTokenService(IConfiguration config) : IJwtTokenService
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Name, user.Name),
             new(ClaimTypes.Role, user.Role.ToString()),
-            // jti = unique id per token, handy for logging / future denylist
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 

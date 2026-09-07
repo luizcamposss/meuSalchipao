@@ -33,6 +33,30 @@ public class AuthController(IAuthService authService, IHostEnvironment env) : Co
         name = User.FindFirstValue("name"),
         role = User.FindFirstValue(ClaimTypes.Role),
     });
+
+    [HttpPost("refresh")]
+    public async Task<ActionResult<LoginResponse>> Refresh(CancellationToken ct)
+    {
+        if (!Request.Cookies.TryGetValue("refresh_token", out var refreshToken)
+            || string.IsNullOrEmpty(refreshToken))
+        {
+            ClearAuthCookies();
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Missing refresh token.");
+        }
+
+        try
+        {
+            var result = await authService.RefreshAsync(refreshToken, ct);
+            SetAuthCookies(result.AccessToken, result.RefreshToken);
+            return Ok(result.User);
+        }
+        catch (System.Security.Authentication.AuthenticationException ex)
+        {
+            ClearAuthCookies();
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: ex.Message);
+        }
+    }
+
     private void SetAuthCookies(string accessToken, string refreshToken)
     {
         var secure = !env.IsDevelopment();
@@ -53,5 +77,10 @@ public class AuthController(IAuthService authService, IHostEnvironment env) : Co
             Path = "/auth/refresh",
             MaxAge = TimeSpan.FromDays(30),
         });
+    }
+    private void ClearAuthCookies()
+    {
+        Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+        Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/auth/refresh" });
     }
 }
