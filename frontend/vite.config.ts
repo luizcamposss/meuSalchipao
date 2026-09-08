@@ -14,12 +14,18 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Everything under /api is forwarded to the ASP.NET Core API.
-      // rewrite strips the /api prefix so the backend still sees /auth, /orders, ...
+      // Tudo sob /api vai para a API ASP.NET Core.
+      // rewrite tira o prefixo /api (o backend serve em /auth, /orders, ...).
       '/api': {
         target: 'http://localhost:5029',
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api/, ''),
+        // O backend seta refresh_token com Path=/auth/refresh. Como o cliente
+        // chama /api/auth/refresh, sem reescrever o Path o browser não devolve
+        // o cookie. Reescreve o Path=/auth/refresh -> /api/auth/refresh.
+        cookiePathRewrite: {
+          '/auth/refresh': '/api/auth/refresh',
+        },
       },
     },
   },
