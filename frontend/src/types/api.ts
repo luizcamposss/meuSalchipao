@@ -92,6 +92,7 @@ export interface EventPhaseSnapshot {
   salesOpen: boolean
   redemptionOpen: boolean
   phase: EventPhaseName
+  salesOpenAt: string
   salesCloseAt: string
   redemptionOpensAt: string
   serverTime: string

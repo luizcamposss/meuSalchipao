@@ -1,8 +1,11 @@
 import { Route, Routes } from 'react-router-dom'
 
+import { CartPage } from '@/pages/CartPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { OrdersPage } from '@/pages/OrdersPage'
+import { ProfilePage } from '@/pages/ProfilePage'
 import { RegisterPage } from '@/pages/RegisterPage'
 
 import { AppLayout } from './AppLayout'
@@ -21,6 +24,9 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/carrinho" element={<CartPage />} />
+          <Route path="/pedidos" element={<OrdersPage />} />
+          <Route path="/perfil" element={<ProfilePage />} />
         </Route>
       </Route>
 
