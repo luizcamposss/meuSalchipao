@@ -324,7 +324,7 @@ Auth = cookie `access_token`. **Aluno** = qualquer usuário logado; **Staff** = 
 | POST | `/orders` | aluno | `{ items: [{ productId, quantity }] }` | `201` + pedido · `400` (vazio / qtd inválida / >4 itens / produto inexistente) · `409` (venda fechada / produto indisponível) |
 | GET | `/orders` | aluno | — | `200` — só os meus |
 | GET | `/orders/{id}` | aluno (meu) / Staff (qualquer) | — | `200` · `404` |
-| GET | `/orders/{id}/ticket` | dono / Staff | — | `200` `{ orderId, status, total, redeemedAt?, qrValue, items }` · `404` (não pago ainda) |
+| GET | `/orders/{id}/ticket` | dono / Staff | — | `200` `{ orderId, status, total, redeemedAt?, pickupNumber?, qrValue, items }` · `404` (não pago ainda) |
 | POST | `/orders/{id}/redeem` | **o próprio aluno** | — | `200` ticket resgatado · `409` (resgate não aberto / não pago / já resgatado — com a data) · `404` |
 
 O `redeem` é autenticado como o **próprio aluno** — o operador do balcão faz o gesto de

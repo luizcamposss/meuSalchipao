@@ -48,7 +48,6 @@ public class RedemptionService : IRedemptionService
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
-        // Fast, clear errors for the common cases.
         if (order is null || order.UserId != userId)
             throw new NotFoundException("Order not found.");
 
@@ -64,8 +63,6 @@ public class RedemptionService : IRedemptionService
 
         var now = _clock.GetUtcNow().UtcDateTime;
 
-        // Race-safe: a single atomic UPDATE ... WHERE Status = 'Paid'. Of two concurrent
-        // redeems only one touches a row; the other gets 0 rows affected.
         var affected = await _context.Orders
             .Where(o => o.Id == orderId && o.Status == OrderStatus.Paid)
             .ExecuteUpdateAsync(s => s
@@ -79,7 +76,6 @@ public class RedemptionService : IRedemptionService
             .FirstAsync(o => o.Id == orderId, ct);
 
         if (affected == 0)
-            // Someone redeemed it between the check above and here.
             throw new ConflictException(
                 $"Ticket already redeemed at {fresh.RedeemedAt:yyyy-MM-dd HH:mm} UTC.");
 
@@ -92,6 +88,7 @@ public class RedemptionService : IRedemptionService
         order.Total,
         order.CreatedAt,
         order.RedeemedAt,
+        order.PickupNumber,
         order.Id.ToString(),
         _mapper.Map<List<OrderItemResponse>>(order.Items));
 }
