@@ -1,5 +1,6 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
+import { useMe } from '@/features/auth/hooks'
 import { CartPage } from '@/pages/CartPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -8,12 +9,19 @@ import { OrderPage } from '@/pages/OrderPage'
 import { OrdersPage } from '@/pages/OrdersPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { RegisterPage } from '@/pages/RegisterPage'
+import { SacPage } from '@/pages/SacPage'
+import { StaffPage } from '@/pages/staff/StaffPage'
+import { StaffTicketPage } from '@/pages/staff/StaffTicketPage'
 import { TicketPage } from '@/pages/TicketPage'
 
 import { AppLayout } from './AppLayout'
-import { PublicOnly, RequireAuth } from './RequireAuth'
+import { PublicOnly, RequireAuth, RequireStaff } from './RequireAuth'
+import { StaffLayout } from './StaffLayout'
 
 export function AppRoutes() {
+  const { data: me } = useMe()
+  const isStaff = me?.role === 'Staff'
+
   return (
     <Routes>
       {/* públicas — logado é mandado pra Home */}
@@ -22,15 +30,27 @@ export function AppRoutes() {
         <Route path="/register" element={<RegisterPage />} />
       </Route>
 
-      {/* miolo logado */}
       <Route element={<RequireAuth />}>
+        {/* área de Staff */}
+        <Route element={<RequireStaff />}>
+          <Route element={<StaffLayout />}>
+            <Route path="/staff" element={<StaffPage />} />
+            <Route path="/staff/sac/:ticketId" element={<StaffTicketPage />} />
+          </Route>
+        </Route>
+
+        {/* miolo do aluno */}
         <Route element={<AppLayout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/"
+            element={isStaff ? <Navigate to="/staff" replace /> : <HomePage />}
+          />
           <Route path="/carrinho" element={<CartPage />} />
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/pedidos/:orderId" element={<OrderPage />} />
           <Route path="/pedidos/:orderId/ticket" element={<TicketPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
+          <Route path="/sac" element={<SacPage />} />
         </Route>
       </Route>
 

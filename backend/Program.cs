@@ -155,7 +155,30 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+
+    if (!db.Users.Any(u => u.Role == Role.Staff))
+    {
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
+        var staff = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = "Equipe Salchipão",
+            Email = "staff@salchipao.com",
+            Enrollment = "staff01!",
+            Shift = Shift.Morning,
+            Role = Role.Staff,
+            Active = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+        staff.PasswordHash = hasher.HashPassword(staff, "salchipao123");
+        db.Users.Add(staff);
+        db.SaveChanges();
+        app.Logger.LogInformation(
+            "Seeded staff user {Email} (senha: salchipao123)", staff.Email);
+    }
 }
 
 app.Run();

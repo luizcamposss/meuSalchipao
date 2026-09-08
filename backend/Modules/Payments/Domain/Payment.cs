@@ -7,7 +7,7 @@ public class Payment
     public Guid Id { get; set; }
     public Guid OrderId { get; set; }
     public string Provider { get; set; } = null!;
-    public string? ExternalId { get; set; }   // null on a stub row until Mercado Pago responds
+    public string? ExternalId { get; set; }
     public PaymentStatus Status { get; set; }
     public string? StatusDetail { get; set; }
     public decimal Amount { get; set; }

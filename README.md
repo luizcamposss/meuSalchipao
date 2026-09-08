@@ -301,7 +301,7 @@ Auth = cookie `access_token`. **Aluno** = qualquer usuário logado; **Staff** = 
 | POST | `/auth/login` | — (rate: `auth`) | `{ email, password }` | `200` + user + **cookies** · `401` credenciais |
 | POST | `/auth/refresh` | cookie `refresh_token` | — | `200` + user + cookies novos · `401` (limpa cookies) |
 | POST | `/auth/logout` | — | — | `204` (idempotente) |
-| GET | `/auth/me` | aluno | — | `200` `{ id, name, role }` · `401` |
+| GET | `/auth/me` | aluno | — | `200` `{ id, name, email, enrollment, shift, role }` · `401` |
 
 ### Catálogo — `/products`
 
@@ -314,7 +314,7 @@ Auth = cookie `access_token`. **Aluno** = qualquer usuário logado; **Staff** = 
 
 | Método | Rota | Auth | Corpo | Respostas |
 |---|---|---|---|---|
-| GET | `/event` | público | — | `200` `{ salesOpen, redemptionOpen, phase, salesOpenAt, salesCloseAt, redemptionOpensAt, serverTime }` |
+| GET | `/event` | público | — | `200` `{ salesOpen, redemptionOpen, phase, forcedPhase, salesOpenAt, salesCloseAt, redemptionOpensAt, serverTime }` |
 | PUT | `/event` | **Staff** | `{ salesOpenAt, salesCloseAt, redemptionOpensAt, forcedPhase }` | `200` snapshot · `400` (`SalesOpenAt >= SalesCloseAt`) · `403` |
 
 ### Pedidos — `/orders`

@@ -110,8 +110,8 @@ export function TicketPage() {
               <ul className="mt-2 flex flex-col gap-2">
                 {ticket.items.map((it) => (
                   <li key={it.productId} className="flex items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary font-mono text-base font-extrabold text-primary-foreground">
-                      {it.quantity}
+                    <span className="shrink-0 rounded-lg bg-primary px-2.5 py-1 font-mono text-base font-extrabold text-primary-foreground">
+                      {it.quantity}×
                     </span>
                     <span className="text-base font-semibold text-foreground">
                       {it.productName}

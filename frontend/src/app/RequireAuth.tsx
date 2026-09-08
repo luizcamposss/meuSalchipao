@@ -31,3 +31,13 @@ export function PublicOnly() {
   if (me) return <Navigate to="/" replace />
   return <Outlet />
 }
+
+/** Portão da área de Staff. Aninhado dentro do RequireAuth. */
+export function RequireStaff() {
+  const { data: me, isLoading } = useMe()
+
+  if (isLoading) return <FullScreen />
+  if (!me) return <Navigate to="/login" replace />
+  if (me.role !== 'Staff') return <Navigate to="/" replace />
+  return <Outlet />
+}

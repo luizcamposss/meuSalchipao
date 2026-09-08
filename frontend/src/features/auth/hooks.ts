@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import type { Me } from '@/types/api'
-
 import { authApi } from './api'
 
 export const authKeys = {
@@ -25,13 +23,8 @@ export function useLogin() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: authApi.login,
-    onSuccess: (user) => {
-      // popula o cache de sessão na hora e revalida o resto com a sessão nova
-      qc.setQueryData<Me>(authKeys.me, {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-      })
+    onSuccess: () => {
+      // revalida tudo com a sessão nova; o /auth/me passa a trazer o perfil completo
       void qc.invalidateQueries()
     },
   })

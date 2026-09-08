@@ -68,10 +68,13 @@ export interface LoginResponse {
   shift: Shift
 }
 
-/** corpo de GET /auth/me (só isto — sem email/shift) */
+/** corpo de GET /auth/me */
 export interface Me {
   id: string
   name: string
+  email: string
+  enrollment: string
+  shift: Shift
   role: Role
 }
 
@@ -92,6 +95,7 @@ export interface EventPhaseSnapshot {
   salesOpen: boolean
   redemptionOpen: boolean
   phase: EventPhaseName
+  forcedPhase: ForcedPhase
   salesOpenAt: string
   salesCloseAt: string
   redemptionOpensAt: string
