@@ -27,6 +27,15 @@ export function AppRoutes() {
           <Route path="/carrinho" element={<CartPage />} />
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
+          {/* pagamento Pix: próxima branch */}
+          <Route
+            path="/pagar/:orderId"
+            element={
+              <div className="grid place-items-center py-16 text-center text-sm text-muted-foreground">
+                Pagamento — próxima branch.
+              </div>
+            }
+          />
         </Route>
       </Route>
 
