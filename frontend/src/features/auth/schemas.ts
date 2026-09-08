@@ -26,7 +26,7 @@ export const registerSchema = z.object({
     .string()
     .trim()
     .min(1, 'Informe a matrícula.')
-    .max(8, 'Máximo de 8 caracteres.'),
+    .max(10, 'Máximo de 10 caracteres.'),
   shift: z.enum(shiftValues, { error: 'Selecione o turno.' }),
   password: z
     .string()

@@ -15,7 +15,7 @@ public record RegisterRequest
     public string Email { get; set; } = null!;
 
     [Required(ErrorMessage = "Registration is mandatory.")]
-    [StringLength(8, ErrorMessage = "The registration number must have a maximum of 8 characters.")]
+    [StringLength(10, ErrorMessage = "The registration number must have a maximum of 10 characters.")]
     public string Enrollment { get; set; } = null!;
 
     [EnumDataType(typeof(Shift), ErrorMessage = "Invalid turn.")]
