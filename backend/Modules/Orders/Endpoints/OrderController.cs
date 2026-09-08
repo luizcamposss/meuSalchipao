@@ -24,6 +24,13 @@ public class OrderController(IOrderService orders, IRedemptionService redemption
         return Ok(await orders.GetMineAsync(CurrentUserId, ct));
     }
 
+    [HttpGet("stats")]
+    [Authorize(Roles = "Staff")]
+    public async Task<ActionResult<OrderStatsResponse>> Stats(CancellationToken ct)
+    {
+        return Ok(await orders.GetStatsAsync(ct));
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<OrderResponse>> GetById(Guid id, CancellationToken ct)
     {

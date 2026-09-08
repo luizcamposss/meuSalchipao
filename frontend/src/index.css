@@ -46,6 +46,12 @@
   --flag-green: oklch(0.52 0.13 155);
   --flag-red: oklch(0.52 0.2 26);
   --flag-yellow: oklch(0.79 0.15 85);
+
+  /* gráficos do painel — passam no validador de contraste/CVD p/ o fundo card */
+  --chart-sales: oklch(0.52 0.2 26); /* vermelho da marca — barras de venda */
+  --chart-redeemed: oklch(0.52 0.13 155); /* verde — tickets resgatados */
+  --chart-pending: oklch(0.7 0.15 74); /* âmbar — tickets a resgatar */
+  --chart-track: oklch(0.9 0.025 84); /* trilho neutro atrás das barras */
 }
 
 @theme inline {
@@ -72,6 +78,11 @@
   --color-flag-green: var(--flag-green);
   --color-flag-red: var(--flag-red);
   --color-flag-yellow: var(--flag-yellow);
+
+  --color-chart-sales: var(--chart-sales);
+  --color-chart-redeemed: var(--chart-redeemed);
+  --color-chart-pending: var(--chart-pending);
+  --color-chart-track: var(--chart-track);
 
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 

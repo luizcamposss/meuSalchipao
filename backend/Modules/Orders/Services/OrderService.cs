@@ -95,6 +95,54 @@ public class OrderService : IOrderService
         return mapper.Map<List<OrderResponse>>(orders);
     }
 
+    public async Task<OrderStatsResponse> GetStatsAsync(CancellationToken ct)
+    {
+        // "Vendido" = pedido que chegou a pago (Paid) ou já foi resgatado (Redeemed).
+        var salchiposSold = await _context.OrderItems
+            .AsNoTracking()
+            .Where(i => i.Order.Status == OrderStatus.Paid || i.Order.Status == OrderStatus.Redeemed)
+            .SumAsync(i => (int?)i.Quantity, ct) ?? 0;
+
+        var revenue = await _context.Orders
+            .AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Paid || o.Status == OrderStatus.Redeemed)
+            .SumAsync(o => (decimal?)o.Total, ct) ?? 0m;
+
+        var ticketsToRedeem = await _context.Orders
+            .AsNoTracking()
+            .CountAsync(o => o.Status == OrderStatus.Paid, ct);
+
+        var ticketsRedeemed = await _context.Orders
+            .AsNoTracking()
+            .CountAsync(o => o.Status == OrderStatus.Redeemed, ct);
+
+        // Vendas por dia. Poucos pedidos num evento escolar — agrega em memória
+        // pra poder converter o instante UTC pro dia no fuso de Brasília sem
+        // depender de tradução SQL de fuso.
+        var paidRows = await _context.Orders
+            .AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Paid || o.Status == OrderStatus.Redeemed)
+            .Select(o => new { o.CreatedAt, Qty = o.Items.Sum(i => i.Quantity), o.Total })
+            .ToListAsync(ct);
+
+        var brasilia = TimeSpan.FromHours(-3); // sem horário de verão desde 2019
+        var byDay = paidRows
+            .GroupBy(r => DateOnly.FromDateTime(r.CreatedAt + brasilia))
+            .Select(g => new DailySales(g.Key, g.Sum(r => r.Qty), g.Sum(r => r.Total)))
+            .OrderBy(d => d.Day)
+            .ToList();
+
+        return new OrderStatsResponse
+        {
+            SalchiposSold = salchiposSold,
+            Revenue = revenue,
+            TicketsToRedeem = ticketsToRedeem,
+            TicketsRedeemed = ticketsRedeemed,
+            TicketsGenerated = ticketsToRedeem + ticketsRedeemed,
+            ByDay = byDay,
+        };
+    }
+
     public async Task<OrderResponse?> GetByIdAsync(Guid id, Guid userId, bool isStaff, CancellationToken ct)
     {
         var order = await _context.Orders

@@ -1,12 +1,3 @@
-# Produção — Caddy (HTTPS) + frontend (nginx) + API (.NET) + MySQL.
-#
-# Na VM:
-#   cp .env.example .env      # preencha
-#   docker compose -f docker-compose.prod.yaml up -d --build
-#
-# Só o Caddy expõe portas no host (80/443). API, frontend e banco ficam
-# na rede interna do compose.
-
 name: meusalchipao
 
 services:
@@ -18,9 +9,9 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      DOMAIN_APP: ${DOMAIN_APP:?defina no .env}
-      DOMAIN_API: ${DOMAIN_API:?defina no .env}
-      ACME_EMAIL: ${ACME_EMAIL:?defina no .env}
+      DOMAIN_APP: ${DOMAIN_APP}
+      DOMAIN_API: ${DOMAIN_API}
+      ACME_EMAIL: ${ACME_EMAIL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -33,7 +24,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: ${VITE_API_URL:?defina no .env}
+        VITE_API_URL: ${VITE_API_URL}
     restart: unless-stopped
     expose:
       - "80"
@@ -56,10 +47,10 @@ services:
     image: mysql:8.4
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?defina no .env}
-      MYSQL_DATABASE: ${DB_NAME:?defina no .env}
-      MYSQL_USER: ${DB_USER:?defina no .env}
-      MYSQL_PASSWORD: ${DB_USER_PASSWORD:?defina no .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_USER_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
