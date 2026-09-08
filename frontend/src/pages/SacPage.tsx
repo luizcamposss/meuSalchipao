@@ -1,7 +1,6 @@
 import {
   ChevronLeftIcon,
   HeadphonesIcon,
-  PaperclipIcon,
   RotateCwIcon,
   SendIcon,
 } from 'lucide-react'
@@ -263,19 +262,13 @@ export function SacPage() {
           onSubmit={submit}
           className="flex items-center gap-2 border-t border-border bg-card p-3"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-input bg-background px-3.5 py-2.5">
-            <PaperclipIcon
-              className="size-[1.15rem] shrink-0 text-muted-foreground/60"
-              aria-hidden
-            />
-            <input
-              ref={inputRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Digite sua mensagem…"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </div>
+          <input
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Digite sua mensagem…"
+            className="min-w-0 flex-1 rounded-full border border-input bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+          />
           <button
             type="submit"
             disabled={!text.trim() || send.isPending}
