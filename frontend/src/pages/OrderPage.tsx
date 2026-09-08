@@ -195,6 +195,14 @@ function PixPayment({
           </div>
         )}
       </div>
+
+      <Button
+        asChild
+        variant="outline"
+        className="h-11 w-full rounded-xl border-[1.5px] border-primary text-sm font-semibold text-primary hover:bg-primary/5 hover:text-primary"
+      >
+        <Link to="/pedidos">Voltar aos pedidos</Link>
+      </Button>
     </div>
   )
 }
@@ -224,7 +232,7 @@ export function OrderPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Logo className="mx-auto w-40" />
+      <Logo className="mx-auto w-44" />
 
       <div className="overflow-hidden rounded-3xl bg-card p-5 shadow-sm">
         {isLoading ? (
