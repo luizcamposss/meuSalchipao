@@ -171,26 +171,50 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 
-    if (!db.Users.Any(u => u.Role == Role.Staff))
+    // Staff de bootstrap. Cada perfil é semeado só se o e-mail ainda não existir,
+    // então funciona tanto num banco novo quanto num que já tinha o staff antigo.
+    // Trocar as senhas depois do primeiro login (ver README).
+    var seedStaff = new[]
+    {
+        (Name: "Equipe Salchipão", Email: "staff@salchipao.com", Enrollment: "STAFF001", Shift: Shift.Morning, Password: "staff01!"),
+        (Name: "Equipe Salchipão · Tarde", Email: "staff2@salchipao.com", Enrollment: "STAFF002", Shift: Shift.Afternoon, Password: "staff02!"),
+        (Name: "Equipe Salchipão · Noite", Email: "staff3@salchipao.com", Enrollment: "STAFF003", Shift: Shift.Evening, Password: "staff03!"),
+    };
+
+    var staffEmails = seedStaff.Select(s => s.Email).ToArray();
+    var existingStaffEmails = db.Users
+        .Where(u => staffEmails.Contains(u.Email))
+        .Select(u => u.Email)
+        .ToHashSet();
+
+    if (existingStaffEmails.Count < seedStaff.Length)
     {
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
-        var staff = new User
+
+        foreach (var s in seedStaff)
         {
-            Id = Guid.NewGuid(),
-            Name = "Equipe Salchipão",
-            Email = "staff@salchipao.com",
-            Enrollment = "STAFF001",
-            Shift = Shift.Morning,
-            Role = Role.Staff,
-            Active = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
-        staff.PasswordHash = hasher.HashPassword(staff, "staff01!");
-        db.Users.Add(staff);
+            if (existingStaffEmails.Contains(s.Email))
+                continue;
+
+            var now = DateTime.UtcNow;
+            var staff = new User
+            {
+                Id = Guid.NewGuid(),
+                Name = s.Name,
+                Email = s.Email,
+                Enrollment = s.Enrollment,
+                Shift = s.Shift,
+                Role = Role.Staff,
+                Active = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            staff.PasswordHash = hasher.HashPassword(staff, s.Password);
+            db.Users.Add(staff);
+            app.Logger.LogInformation("Seeded staff user {Email}", staff.Email);
+        }
+
         db.SaveChanges();
-        app.Logger.LogInformation(
-            "Seeded staff user {Email} (senha: staff01)", staff.Email);
     }
 }
 
