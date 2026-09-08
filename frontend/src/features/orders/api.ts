@@ -1,5 +1,9 @@
 import { api } from '@/lib/api'
-import type { CreateOrderRequest, OrderResponse } from '@/types/api'
+import type {
+  CreateOrderRequest,
+  OrderResponse,
+  TicketResponse,
+} from '@/types/api'
 
 export const ordersApi = {
   create: (body: CreateOrderRequest) =>
@@ -10,4 +14,10 @@ export const ordersApi = {
 
   get: (id: string, signal?: AbortSignal) =>
     api.get<OrderResponse>(`/orders/${id}`, { signal }),
+
+  getTicket: (id: string, signal?: AbortSignal) =>
+    api.get<TicketResponse>(`/orders/${id}/ticket`, { signal }),
+
+  redeem: (id: string) =>
+    api.post<TicketResponse>(`/orders/${id}/redeem`),
 }

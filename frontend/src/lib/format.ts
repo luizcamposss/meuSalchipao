@@ -65,6 +65,10 @@ const toDate = (v: string | Date) => (typeof v === 'string' ? new Date(v) : v)
 
 export const money = (value: number) => brl.format(value)
 
+/** id do pedido em formato curto p/ exibição: "98F54632" */
+export const orderCode = (id: string) =>
+  id.replace(/-/g, '').slice(0, 8).toUpperCase()
+
 export const formatDateTime = (value: string | Date) =>
   dateTimeFmt.format(toDate(value))
 

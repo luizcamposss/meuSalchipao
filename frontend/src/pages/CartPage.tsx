@@ -21,6 +21,7 @@ import { usePhase } from '@/features/event/hooks'
 import { useCreateOrder } from '@/features/orders/hooks'
 import { ApiError } from '@/lib/api'
 import { longDate, money } from '@/lib/format'
+import { usePersistentState } from '@/lib/usePersistentState'
 import { cn } from '@/lib/utils'
 
 const MAX_QTY = 4
@@ -31,7 +32,7 @@ export function CartPage() {
   const { phase } = usePhase()
   const createOrder = useCreateOrder()
 
-  const [qty, setQty] = React.useState(1)
+  const [qty, setQty] = usePersistentState('cart:qty', 1)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
 
@@ -52,7 +53,7 @@ export function CartPage() {
         items: [{ productId: product.id, quantity: qty }],
       })
       setConfirmOpen(false)
-      navigate(`/pagar/${order.id}`)
+      navigate(`/pedidos/${order.id}`)
     } catch (err) {
       if (err instanceof ApiError && (err.status === 409 || err.status === 400)) {
         setFormError(err.message || 'Não foi possível criar o pedido.')

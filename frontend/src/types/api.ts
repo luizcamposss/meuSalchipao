@@ -138,6 +138,7 @@ export interface TicketResponse {
   total: number
   createdAt: string
   redeemedAt: string | null
+  pickupNumber: number | null
   qrValue: string
   items: OrderItemResponse[]
 }

@@ -4,9 +4,11 @@ import { CartPage } from '@/pages/CartPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { OrderPage } from '@/pages/OrderPage'
 import { OrdersPage } from '@/pages/OrdersPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { RegisterPage } from '@/pages/RegisterPage'
+import { TicketPage } from '@/pages/TicketPage'
 
 import { AppLayout } from './AppLayout'
 import { PublicOnly, RequireAuth } from './RequireAuth'
@@ -26,16 +28,9 @@ export function AppRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/carrinho" element={<CartPage />} />
           <Route path="/pedidos" element={<OrdersPage />} />
+          <Route path="/pedidos/:orderId" element={<OrderPage />} />
+          <Route path="/pedidos/:orderId/ticket" element={<TicketPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
-          {/* pagamento Pix: próxima branch */}
-          <Route
-            path="/pagar/:orderId"
-            element={
-              <div className="grid place-items-center py-16 text-center text-sm text-muted-foreground">
-                Pagamento — próxima branch.
-              </div>
-            }
-          />
         </Route>
       </Route>
 
