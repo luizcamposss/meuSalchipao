@@ -6,6 +6,7 @@ export const orderKeys = {
   list: ['orders'] as const,
   detail: (id: string) => ['orders', id] as const,
   ticket: (id: string) => ['orders', id, 'ticket'] as const,
+  stats: ['orders', 'stats'] as const,
 }
 
 export function useOrders() {
@@ -13,6 +14,16 @@ export function useOrders() {
     queryKey: orderKeys.list,
     queryFn: ({ signal }) => ordersApi.list(signal),
     staleTime: 15_000,
+  })
+}
+
+/** Staff: números do evento. Atualiza sozinho a cada 15s. */
+export function useOrderStats() {
+  return useQuery({
+    queryKey: orderKeys.stats,
+    queryFn: ({ signal }) => ordersApi.stats(signal),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   })
 }
 

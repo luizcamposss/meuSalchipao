@@ -147,6 +147,30 @@ export interface TicketResponse {
   items: OrderItemResponse[]
 }
 
+/** uma barra do gráfico "salchipões por dia" (dia em horário de Brasília) */
+export interface DailySales {
+  /** "2026-09-08" */
+  day: string
+  salchipos: number
+  revenue: number
+}
+
+/** GET /orders/stats — números do evento para o painel da equipe (Staff). */
+export interface OrderStats {
+  /** salchipões vendidos (soma das quantidades de pedidos pagos) */
+  salchiposSold: number
+  /** total em reais dos pedidos pagos */
+  revenue: number
+  /** tickets pagos ainda não resgatados */
+  ticketsToRedeem: number
+  /** tickets já resgatados no balcão */
+  ticketsRedeemed: number
+  /** tickets gerados ao todo (pagos + resgatados) */
+  ticketsGenerated: number
+  /** vendas por dia, em ordem crescente */
+  byDay: DailySales[]
+}
+
 // ---- payments ----------------------------------------------------
 
 export interface PaymentResponse {

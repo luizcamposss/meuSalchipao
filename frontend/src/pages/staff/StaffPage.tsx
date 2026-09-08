@@ -1,21 +1,37 @@
-import { RotateCwIcon } from 'lucide-react'
+import {
+  BanknoteIcon,
+  HourglassIcon,
+  LayersIcon,
+  type LucideIcon,
+  RotateCwIcon,
+  ShoppingBagIcon,
+  TicketCheckIcon,
+} from 'lucide-react'
 import * as React from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEvent, useUpdateEvent } from '@/features/event/hooks'
+import { useOrderStats } from '@/features/orders/hooks'
 import { useSacQueue } from '@/features/sac/hooks'
 import { STATUS_CLASS, STATUS_LABEL } from '@/features/sac/labels'
 import { ApiError } from '@/lib/api'
-import { formatDateTime, fromInputLocal, toInputLocal } from '@/lib/format'
+import {
+  formatDateTime,
+  fromInputLocal,
+  money,
+  toInputLocal,
+} from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type {
   EventPhaseSnapshot,
   ForcedPhase,
+  OrderStats,
   SacTicketResponse,
   SacTicketStatus,
 } from '@/types/api'
 
+import { RedeemMeter, SalesBarChart } from './SummaryCharts'
 import { TicketDetail } from './TicketDetail'
 
 const FILTERS: { label: string; value?: SacTicketStatus }[] = [
@@ -31,6 +47,199 @@ const FORCED_OPTIONS: { value: ForcedPhase; label: string }[] = [
   { value: 'RedemptionOnly', label: 'Forçar retirada' },
   { value: 'Closed', label: 'Forçar fechado' },
 ]
+
+// ---- resumo do evento ---------------------------------------------
+
+const ACCENT = {
+  sales: 'bg-primary/10 text-primary',
+  redeemed: 'bg-chart-redeemed/12 text-chart-redeemed',
+  pending: 'bg-chart-pending/15 text-chart-pending',
+  neutral: 'bg-secondary text-secondary-foreground',
+} as const
+
+function StatCard({
+  icon: Icon,
+  value,
+  label,
+  hint,
+  accent = 'neutral',
+  emphasis = false,
+}: {
+  icon: LucideIcon
+  value: React.ReactNode
+  label: string
+  hint: string
+  accent?: keyof typeof ACCENT
+  emphasis?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-sm ring-1 transition-shadow hover:shadow-md',
+        emphasis ? 'ring-primary/25' : 'ring-border/60',
+      )}
+    >
+      <span
+        className={cn(
+          'grid size-9 place-items-center rounded-xl',
+          ACCENT[accent],
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
+      <div>
+        <p
+          className={cn(
+            'font-bold leading-tight tabular-nums text-foreground',
+            emphasis ? 'text-[1.75rem]' : 'text-2xl',
+          )}
+        >
+          {value}
+        </p>
+        <p className="mt-0.5 text-sm font-semibold text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      </div>
+    </div>
+  )
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string
+  subtitle: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl bg-card p-5 shadow-sm ring-1 ring-border/60">
+      <div>
+        <h3 className="text-sm font-bold text-foreground">{title}</h3>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function SummaryDashboard() {
+  const { data, isLoading, isError, refetch, isFetching } = useOrderStats()
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-36 rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid gap-3 lg:grid-cols-3">
+          <Skeleton className="h-72 rounded-2xl lg:col-span-2" />
+          <Skeleton className="h-72 rounded-2xl" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl bg-card p-6 text-center shadow-sm">
+        <p className="text-sm text-muted-foreground">
+          Não foi possível carregar o resumo.
+        </p>
+        <Button
+          variant="outline"
+          className="h-9 rounded-xl border-[1.5px] border-primary text-primary hover:bg-primary/5 hover:text-primary"
+          onClick={() => refetch()}
+        >
+          <RotateCwIcon className="size-4" />
+          Tentar de novo
+        </Button>
+      </div>
+    )
+  }
+
+  const stats: OrderStats = data
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <span className="relative flex size-2">
+          <span
+            className={cn(
+              'absolute inline-flex size-full rounded-full bg-chart-redeemed/60',
+              isFetching && 'animate-ping',
+            )}
+          />
+          <span className="relative inline-flex size-2 rounded-full bg-chart-redeemed" />
+        </span>
+        <span className="text-xs text-muted-foreground">
+          Ao vivo · atualiza a cada 15s · só conta pedidos pagos
+        </span>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard
+          icon={ShoppingBagIcon}
+          value={stats.salchiposSold}
+          label="Salchipões vendidos"
+          hint="unidades em pedidos pagos"
+          accent="sales"
+        />
+        <StatCard
+          icon={BanknoteIcon}
+          value={money(stats.revenue)}
+          label="Total vendido"
+          hint="soma dos pedidos pagos"
+          accent="sales"
+          emphasis
+        />
+        <StatCard
+          icon={HourglassIcon}
+          value={stats.ticketsToRedeem}
+          label="A resgatar"
+          hint="tickets pagos aguardando o balcão"
+          accent="pending"
+        />
+        <StatCard
+          icon={TicketCheckIcon}
+          value={stats.ticketsRedeemed}
+          label="Já resgatados"
+          hint="tickets retirados no balcão"
+          accent="redeemed"
+        />
+        <StatCard
+          icon={LayersIcon}
+          value={stats.ticketsGenerated}
+          label="Tickets gerados"
+          hint="pagos + resgatados, no total"
+          accent="neutral"
+        />
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SectionCard
+            title="Salchipões por dia"
+            subtitle="unidades vendidas por data (horário de Brasília)"
+          >
+            <SalesBarChart data={stats.byDay} />
+          </SectionCard>
+        </div>
+        <SectionCard
+          title="Resgate no balcão"
+          subtitle="quanto dos tickets pagos já foi retirado"
+        >
+          <RedeemMeter
+            redeemed={stats.ticketsRedeemed}
+            pending={stats.ticketsToRedeem}
+          />
+        </SectionCard>
+      </div>
+    </div>
+  )
+}
 
 // ---- fila do SAC ----------------------------------------------------
 
@@ -317,30 +526,46 @@ function EventControl() {
 
 // ---- página ------------------------------------------------------
 
+const TABS = [
+  { value: 'summary', label: 'Resumo' },
+  { value: 'sac', label: 'Atendimento' },
+  { value: 'event', label: 'Evento' },
+] as const
+
+type StaffTab = (typeof TABS)[number]['value']
+
 export function StaffPage() {
-  const [tab, setTab] = React.useState<'sac' | 'event'>('sac')
+  const [tab, setTab] = React.useState<StaffTab>('summary')
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex w-fit rounded-full bg-secondary/60 p-1">
-        {(['sac', 'event'] as const).map((t) => (
+        {TABS.map((t) => (
           <button
-            key={t}
+            key={t.value}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => setTab(t.value)}
             className={cn(
               'rounded-full px-6 py-2 text-sm font-semibold transition-colors',
-              tab === t
+              tab === t.value
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground',
             )}
           >
-            {t === 'sac' ? 'Atendimento' : 'Evento'}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'sac' ? <SacQueue /> : <div className="max-w-lg"><EventControl /></div>}
+      {tab === 'summary' ? (
+        <SummaryDashboard />
+      ) : tab === 'sac' ? (
+        <SacQueue />
+      ) : (
+        <div className="max-w-lg">
+          <EventControl />
+        </div>
+      )}
     </div>
   )
 }
