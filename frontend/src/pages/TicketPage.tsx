@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { usePhase } from '@/features/event/hooks'
 import { useRedeem, useTicket } from '@/features/orders/hooks'
 import { ApiError } from '@/lib/api'
-import { formatTime, money, orderCode } from '@/lib/format'
+import { formatDateTime, formatTime, money, orderCode } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 export function TicketPage() {
@@ -103,23 +103,45 @@ export function TicketPage() {
               {statusPill.text}
             </span>
 
-            <div className="mt-5 flex items-center justify-between gap-2 rounded-2xl bg-secondary/60 px-4 py-3 text-left">
-              <div>
-                <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Pedido
-                </p>
-                <p className="font-mono text-sm font-bold text-foreground">
-                  #{orderCode(ticket.orderId)}
-                </p>
+            <div className="mt-5 rounded-2xl bg-secondary/60 px-4 py-3 text-left">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                Entregar no balcão
+              </p>
+              <ul className="mt-2 flex flex-col gap-2">
+                {ticket.items.map((it) => (
+                  <li key={it.productId} className="flex items-center gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary font-mono text-base font-extrabold text-primary-foreground">
+                      {it.quantity}
+                    </span>
+                    <span className="text-base font-semibold text-foreground">
+                      {it.productName}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-3 flex items-baseline justify-between gap-2 border-t border-dashed border-border pt-3">
+                <div>
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Pedido
+                  </p>
+                  <p className="font-mono text-sm font-bold text-foreground">
+                    #{orderCode(ticket.orderId)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Total
+                  </p>
+                  <p className="font-mono text-sm font-bold text-primary">
+                    {money(ticket.total)}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Total
-                </p>
-                <p className="font-mono text-sm font-bold text-primary">
-                  {money(ticket.total)}
-                </p>
-              </div>
+
+              <p className="mt-2 text-[0.6875rem] text-muted-foreground">
+                Pedido feito em {formatDateTime(ticket.createdAt)}
+              </p>
             </div>
 
             {isRedeemed ? (
