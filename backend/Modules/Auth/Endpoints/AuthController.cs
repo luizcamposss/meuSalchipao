@@ -30,12 +30,12 @@ public class AuthController(IAuthService authService, IHostEnvironment env) : Co
 
     [HttpGet("me")]
     [Authorize]
-    public ActionResult Me() => Ok(new
+    public async Task<ActionResult<MeResponse>> Me(CancellationToken ct)
     {
-        id = User.FindFirstValue("sub"),
-        name = User.FindFirstValue("name"),
-        role = User.FindFirstValue(ClaimTypes.Role),
-    });
+        var userId = Guid.Parse(User.FindFirstValue("sub")!);
+        var me = await authService.GetMeAsync(userId, ct);
+        return me is null ? Unauthorized() : Ok(me);
+    }
 
     [HttpPost("refresh")]
     public async Task<ActionResult<LoginResponse>> Refresh(CancellationToken ct)

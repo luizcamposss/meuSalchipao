@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { EventPhaseSnapshot } from '@/types/api'
 
@@ -18,6 +18,16 @@ export function useEvent() {
     queryFn: ({ signal }) => eventApi.get(signal),
     refetchInterval: 60_000,
     staleTime: 30_000,
+  })
+}
+
+export function useUpdateEvent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: eventApi.update,
+    onSuccess: (snapshot) => {
+      qc.setQueryData(eventKeys.snapshot, snapshot)
+    },
   })
 }
 

@@ -7,5 +7,6 @@ public record TicketResponse(
     decimal Total,
     DateTime CreatedAt,
     DateTime? RedeemedAt,
+    int? PickupNumber,
     string QrValue,
     List<OrderItemResponse> Items);

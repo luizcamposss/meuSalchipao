@@ -66,12 +66,22 @@ public class SacService : ISacService
         if (status is { } s)
             query = query.Where(t => t.Status == s);
 
-        var tickets = await query
+        var rows = await query
             .OrderByDescending(t => t.Priority)
             .ThenBy(t => t.CreatedAt)
+            .Join(_context.Users.AsNoTracking(),
+                t => t.UserId, u => u.Id,
+                (t, u) => new { t, u.Name, u.Email, u.Enrollment })
             .ToListAsync(ct);
 
-        return _mapper.Map<List<SacTicketResponse>>(tickets);
+        return rows
+            .Select(r => _mapper.Map<SacTicketResponse>(r.t) with
+            {
+                UserName = r.Name,
+                UserEmail = r.Email,
+                UserEnrollment = r.Enrollment,
+            })
+            .ToList();
     }
 
     public async Task<SacTicketResponse?> GetByIdAsync(Guid ticketId, Guid userId, bool isStaff, CancellationToken ct)
@@ -87,7 +97,18 @@ public class SacService : ISacService
         if (!isStaff && ticket.UserId != userId)
             return null;
 
-        return _mapper.Map<SacTicketResponse>(ticket);
+        var user = await _context.Users
+            .AsNoTracking()
+            .Where(u => u.Id == ticket.UserId)
+            .Select(u => new { u.Name, u.Email, u.Enrollment })
+            .FirstAsync(ct);
+
+        return _mapper.Map<SacTicketResponse>(ticket) with
+        {
+            UserName = user.Name,
+            UserEmail = user.Email,
+            UserEnrollment = user.Enrollment,
+        };
     }
 
     public async Task<SacMessageResponse> AddMessageAsync(

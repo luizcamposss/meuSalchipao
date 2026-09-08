@@ -160,6 +160,13 @@ public class PaymentService : IPaymentService
                     order.PaymentStatus = PaymentStatus.Approved;
                     order.Status = OrderStatus.Paid;
                     order.UpdatedAt = now;
+
+                    // Número curto de retirada, sequencial (best-effort — sem
+                    // constraint de unicidade; o webhook é serializado na prática).
+                    var lastPickup = await _context.Orders
+                        .Where(o => o.PickupNumber != null)
+                        .MaxAsync(o => (int?)o.PickupNumber, ct);
+                    order.PickupNumber = (lastPickup ?? 0) + 1;
                 }
                 else if (newStatus is PaymentStatus.Rejected or PaymentStatus.Expired)
                 {

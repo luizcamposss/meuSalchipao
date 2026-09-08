@@ -38,8 +38,8 @@ export function LoginPage() {
   async function onSubmit(values: LoginValues) {
     setFormError(null)
     try {
-      await login.mutateAsync(values)
-      navigate(from, { replace: true })
+      const user = await login.mutateAsync(values)
+      navigate(user.role === 'Staff' ? '/staff' : from, { replace: true })
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         form.setError('password', { message: 'E-mail ou senha incorretos.' })

@@ -11,5 +11,8 @@ public class Order
     public DateTime UpdatedAt { get; set; }
     public DateTime? RedeemedAt { get; set; }
     public Guid? RedeemedBy { get; set; }
+
+    /// <summary>Número curto de retirada, atribuído quando o pagamento é aprovado.</summary>
+    public int? PickupNumber { get; set; }
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 }

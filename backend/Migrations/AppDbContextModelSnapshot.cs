@@ -217,6 +217,9 @@ namespace backend.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
+                    b.Property<int?>("PickupNumber")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("RedeemedAt")
                         .HasColumnType("datetime(6)");
 

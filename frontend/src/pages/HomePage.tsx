@@ -17,7 +17,7 @@ function HomeCta({ phase }: { phase: Phase }) {
   if (phase.mode === 'selling') {
     return (
       <Button asChild className={CTA_CLASS}>
-        <Link to="/comprar">Fazer meu pedido agora!</Link>
+        <Link to="/carrinho">Fazer meu pedido agora!</Link>
       </Button>
     )
   }

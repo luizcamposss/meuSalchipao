@@ -61,9 +61,20 @@ const isoDayFmt = new Intl.DateTimeFormat('en-CA', {
   timeZone: TZ,
 })
 
-const toDate = (v: string | Date) => (typeof v === 'string' ? new Date(v) : v)
+const toDate = (v: string | Date) => {
+  if (typeof v !== 'string') return v
+  // O backend manda tudo em UTC. Alguns timestamps vêm sem o sufixo de fuso
+  // (lidos do MySQL como Kind=Unspecified) — força `Z` pra não virar hora
+  // local do aparelho.
+  const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(v)
+  return new Date(v.includes('T') && !hasTz ? `${v}Z` : v)
+}
 
 export const money = (value: number) => brl.format(value)
+
+/** id do pedido em formato curto p/ exibição: "98F54632" */
+export const orderCode = (id: string) =>
+  id.replace(/-/g, '').slice(0, 8).toUpperCase()
 
 export const formatDateTime = (value: string | Date) =>
   dateTimeFmt.format(toDate(value))
@@ -99,6 +110,26 @@ export function calendarDaysBetween(
   const b = isoDayFmt.format(toDate(to))
   const ms = Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)
   return Math.round(ms / 86_400_000)
+}
+
+/** ISO UTC -> valor pra <input type="datetime-local"> em horário de São Paulo */
+export function toInputLocal(iso: string): string {
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(iso))
+  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
+  return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}`
+}
+
+/** valor do <input datetime-local> (horário SP, sem DST desde 2019) -> ISO UTC */
+export function fromInputLocal(local: string): string {
+  return new Date(`${local}:00-03:00`).toISOString()
 }
 
 /** "hoje" | "amanhã" | "em 3 dias" | null (já passou) */

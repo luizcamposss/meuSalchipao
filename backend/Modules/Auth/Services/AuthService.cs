@@ -156,6 +156,17 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync(ct);
     }
 
+    public async Task<MeResponse?> GetMeAsync(Guid userId, CancellationToken ct)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+
+        return user is null
+            ? null
+            : new MeResponse(user.Id, user.Name, user.Email, user.Enrollment, user.Shift, user.Role);
+    }
+
     private static string GenerateRefreshToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);
