@@ -1,77 +1,137 @@
-# meu-salchipão — Backend
+<div align="center">
 
-Sistema interno para a **Semana Farroupilha** (evento escolar, RS). Digitaliza a compra do
-lanche "Salchipão": aluno ou funcionário se cadastra, faz o pedido, **paga por Pix via Mercado
-Pago dentro do app**, e recebe um **ticket digital** que é resgatado no balcão.
+# 🌭 Meu Salchipão
 
-O evento roda em **fases**: uma janela de venda, e depois de uma data de corte as vendas
-fecham e passa a valer só o resgate. A API expõe a fase atual — o frontend e as regras de
-negócio reagem a ela **sem redeploy**.
+**Venda digital do lanche da Semana Farroupilha.**
+O aluno ou funcionário se cadastra, faz o pedido, **paga por Pix via Mercado Pago dentro do app**
+e recebe um **ticket digital** — resgatado no balcão com um deslizar de dedo.
 
-Este repositório é **só o backend** (ASP.NET Core 8 Web API). O frontend é um app React
-separado, fora deste repo.
+![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![MySQL 8.4](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)
+![Mercado Pago](https://img.shields.io/badge/Pix-Mercado%20Pago-00B1EA)
+
+</div>
 
 ---
 
-## Índice
+## Sumário
 
-- [Status](#status)
+- [O que é](#o-que-é)
+- [Funcionalidades](#funcionalidades)
+- [Telas](#telas)
 - [Stack](#stack)
 - [Arquitetura](#arquitetura)
-- [Modelo de domínio](#modelo-de-domínio)
 - [Ciclo de vida do evento](#ciclo-de-vida-do-evento)
 - [Autenticação](#autenticação)
 - [Pagamento Pix + Webhook](#pagamento-pix--webhook)
 - [Referência da API](#referência-da-api)
-- [Configuração](#configuração)
-- [Como rodar](#como-rodar)
-- [Estrutura de pastas](#estrutura-de-pastas)
+- [Modelo de domínio](#modelo-de-domínio)
+- [Rodando localmente](#rodando-localmente)
+- [Deploy](#deploy)
+- [Configuração (`.env`)](#configuração-env)
+- [Estrutura do repositório](#estrutura-do-repositório)
 - [Decisões e tradeoffs](#decisões-e-tradeoffs)
-- [Lacunas conhecidas / próximos passos](#lacunas-conhecidas--próximos-passos)
+- [Lacunas conhecidas](#lacunas-conhecidas)
 
 ---
 
-## Status
+## O que é
 
-Funcionalmente completo. Marcos M0–M8:
+Sistema interno para a **Semana Farroupilha** (evento escolar, RS). Digitaliza a compra do
+"Salchipão": tira a fila do dinheiro, o troco e o vale-papel — o aluno paga pelo celular e
+retira mostrando um código.
 
-| Marco | Entrega |
+O evento roda em **fases**. Há uma janela de venda; depois de uma data de corte as vendas
+fecham e passa a valer só o resgate. **A API expõe a fase atual** — frontend e regras de
+negócio reagem a ela **sem redeploy**. A equipe controla as datas (ou força uma fase) por um
+painel.
+
+**Monorepo:**
+
+| Pasta | O quê |
 |---|---|
-| M0 | Fundação: `.env` + DotNetEnv, EF Core + Pomelo/MySQL, `AppDbContext`, ProblemDetails + handler global de exceções, `/health`. |
-| M1 | Auth: cadastro, login, refresh com rotação, logout, `/auth/me`. JWT em cookie `HttpOnly` + refresh token opaco. |
-| M2 | Catálogo: `Product` + seed do Salchipão, leitura pública. |
-| M3 | Fase do evento: `EventSettings` (linha única) + `EventPhaseService` (usa `TimeProvider`), `GET/PUT /event`. |
-| M4 | Pedidos: criação com snapshot de preço, total calculado no servidor, guard de fase. |
-| M5 | Pix + Webhook: `MercadoPagoClient` (HTTP tipado), `POST /orders/{id}/payment`, `POST /webhooks/mercadopago` (assinatura HMAC + idempotência), `SalesCutoffWorker`. |
-| M6 | Ticket digital + resgate (`redeem` com update atômico). |
-| M7 | SAC: chamados de suporte com thread de mensagens. |
-| M8 | Endurecimento: enums como string no JSON, rate limiting, CORS, Docker. |
+| [`backend/`](backend/) | API — ASP.NET Core 8 Web API, monólito modular, MySQL |
+| [`frontend/`](frontend/) | App — React 19 + Vite + TypeScript, SPA mobile-first |
 
-**Não incluído:** testes automatizados, CI, health-check com ping ao banco, logging estruturado
-avançado, o `IExceptionHandler` custom por tipo já existe mas sem cobertura de teste. Ver
-[lacunas](#lacunas-conhecidas--próximos-passos).
+---
+
+## Funcionalidades
+
+### App do aluno
+
+- **Cadastro / login** com sessão em cookie `HttpOnly` (nenhum token no JavaScript).
+- **Home dirigida pela fase** — antes da venda mostra contagem regressiva; na venda, o CTA de
+  compra; na retirada, o atalho pro ticket; fechado, o aviso.
+- **Montar o pedido** — 1 a 4 salchipões, total calculado no servidor, diálogo de confirmação.
+- **Pagamento Pix** — QR + copia-e-cola, contagem até expirar, a tela **atualiza sozinha**
+  quando o pagamento cai (polling do status).
+- **Ticket digital** — código de retirada curto (`032`), QR, e um **"deslize para confirmar"**
+  que o operador arrasta no celular do aluno para dar baixa (transição atômica, à prova de
+  dois scans).
+- **Meus pedidos** — lista com status contextual.
+- **Atendimento (SAC)** — chat único com a equipe, com respostas rápidas.
+- **Perfil** — dados do cadastro.
+
+### Painel da equipe (Staff)
+
+- **Layout de desktop** — barra de topo, master-detail.
+- **Fila do SAC** — filtro por status, prioridade (Alta em destaque), e o **detalhe do chamado
+  lado a lado**: dados do aluno (nome, e-mail, matrícula, pedido), thread, resposta, e controle
+  de status/prioridade.
+- **Controle do evento** — editar as três datas (abertura/fechamento de vendas, abertura da
+  retirada) em **horário de Brasília** e forçar uma fase (`Auto / SalesOnly / RedemptionOnly /
+  Closed`).
+
+Um usuário `Staff` é **semeado na primeira subida** do backend — credenciais em
+[`backend/Program.cs`](backend/Program.cs). Novos cadastros entram sempre como aluno.
+
+---
+
+## Telas
+
+> _Prints em `docs/screenshots/` (adicionar)._
+
+| Aluno | Staff |
+|---|---|
+| Login · Home · Pedido · Pix · Ticket · SAC | Fila do SAC · Detalhe do chamado · Controle do evento |
 
 ---
 
 ## Stack
 
-| Camada | Escolha |
-|---|---|
-| Runtime | .NET 8 / ASP.NET Core Web API (controllers) |
-| Banco | MySQL 8.4 |
-| ORM | EF Core 8 + **Pomelo.EntityFrameworkCore.MySql** (Code-First + Migrations) |
-| Auth | `Microsoft.AspNetCore.Authentication.JwtBearer` + `PasswordHasher<T>` (só o hasher do Identity, não o framework) |
-| Mapeamento | AutoMapper (um `Profile` por módulo) |
-| HTTP externo | `HttpClient` tipado (`AddHttpClient<T>`) + `Microsoft.Extensions.Http.Resilience` |
-| Config | `.env` na raiz, carregado por **DotNetEnv** antes do `builder` |
-| Container | Dockerfile multi-stage + `docker-compose` (API + MySQL) |
+| | Backend | Frontend |
+|---|---|---|
+| **Runtime** | .NET 8 / ASP.NET Core (controllers) | React 19 + Vite 8 + TypeScript |
+| **Dados** | MySQL 8.4 · EF Core 8 + **Pomelo** (Code-First + Migrations) | **TanStack Query** (estado de servidor, polling, optimistic) |
+| **Auth** | JWT (`JwtBearer`) em cookie + `PasswordHasher<T>` | cookie `credentials: 'include'`, 401 → refresh → retry |
+| **Rotas** | — | React Router 7 |
+| **Formulários** | DataAnnotations | React Hook Form + Zod |
+| **UI** | — | Tailwind CSS v4 + **shadcn/ui** (Radix) · `lucide-react` · `motion` |
+| **Mapeamento** | AutoMapper (um `Profile` por módulo) | — |
+| **HTTP externo** | `HttpClient` tipado + `Microsoft.Extensions.Http.Resilience` | wrapper de `fetch` |
+| **Config** | `.env` + **DotNetEnv** | `.env` (`VITE_API_URL`, build-time) |
+| **Container** | Dockerfile multi-stage + Docker Compose | Dockerfile (build + nginx) |
 
 ---
 
 ## Arquitetura
 
-**Monólito modular.** Um único projeto, um deploy, um `AppDbContext`, um banco — mas dividido
-em módulos de fronteira clara:
+```
+                 ┌──────────────────────────┐
+  navegador  ───▶│  Caddy (HTTPS, Let's Encrypt)
+                 │   meusalchipao.online     ──▶  frontend (nginx serve o dist/)
+                 │   api.meusalchipao.online ──▶  API (Kestrel, rede interna)
+                 └──────────────────────────┘            │
+   Mercado Pago  ──── webhook ────────────────────────────┤ (servidor→servidor)
+                                                          ▼
+                                                     MySQL (rede interna, volume)
+```
+
+### Backend — monólito modular
+
+Um único projeto, um deploy, um `AppDbContext` — dividido em módulos de fronteira clara:
 
 ```
 Auth · Catalog · Event · Orders · Payments · Sac
@@ -81,122 +141,70 @@ Cada módulo tem a mesma estrutura interna:
 
 | Pasta | Papel |
 |---|---|
-| `Domain/` | entidades e enums — sem referência a EF ou HTTP |
-| `Persistence/` | `IEntityTypeConfiguration<T>` (mapeamento fluent) — descoberto por `ApplyConfigurationsFromAssembly`, sem registro manual |
-| `Contracts/` | DTOs de request/response (`record`) — nunca se expõe entidade |
-| `Services/` | lógica de aplicação (interface + implementação, registrada no `Program.cs`) |
+| `Domain/` | entidades e enums — sem EF, sem HTTP |
+| `Persistence/` | `IEntityTypeConfiguration<T>` — descoberto por `ApplyConfigurationsFromAssembly` |
+| `Contracts/` | DTOs `record` — nunca se expõe entidade |
+| `Services/` | lógica de aplicação (interface + implementação) |
 | `Endpoints/` | controllers |
-| `Mapping/` | `XMappingProfile : Profile` — descoberto pelo scan do AutoMapper |
+| `Mapping/` | `XMappingProfile : Profile` (scan do AutoMapper) |
 
-As dependências apontam **para dentro**, para o `Domain`. É o espírito de Clean/Onion
-Architecture sem a cerimônia de projetos separados.
-
-### Ciclo de uma requisição
-
-```
-HTTP  →  Middleware pipeline  →  Controller  →  Service  →  AppDbContext / gateway externo
-                                    │              │
-                            (identidade do JWT)  (regras de negócio, exceções de domínio)
-```
+As dependências apontam **para dentro**, para o `Domain`. Clean/Onion sem a cerimônia de
+projetos separados. Os módulos já são as linhas de corte se um dia precisar dividir.
 
 **Pipeline** (`Program.cs`, em ordem):
-`UseExceptionHandler` → Swagger (dev) → `UseHttpsRedirection` (prod) → `UseCors` →
+`UseExceptionHandler` → Swagger (dev) → `UseHttpsRedirection` → `UseCors` →
 `UseAuthentication` → `UseAuthorization` → `UseRateLimiter` → `MapControllers`.
 
-**Erros:** os services lançam exceções de domínio (`ConflictException`, `NotFoundException`,
-`ValidationException`, `AuthenticationException`, `MercadoPagoException`). O
-`GlobalExceptionHandler` (`IExceptionHandler`, roda dentro do `UseExceptionHandler`) mapeia o
-**tipo** para o status code e devolve **ProblemDetails** (RFC 7807):
+**Erros** — os services lançam exceções de domínio; o `GlobalExceptionHandler`
+(`IExceptionHandler`) mapeia o **tipo** para o status e devolve **ProblemDetails** (RFC 7807):
 
 | Exceção | Status |
 |---|---|
-| `ValidationException` | 400 |
-| `AuthenticationException` | 401 |
-| `NotFoundException` | 404 |
-| `ConflictException` | 409 |
-| `MercadoPagoException` | 502 |
-| qualquer outra | 500 (pipeline padrão) |
+| `ValidationException` | `400` |
+| `AuthenticationException` | `401` |
+| `NotFoundException` | `404` |
+| `ConflictException` | `409` |
+| `MercadoPagoException` | `502` |
 
----
+### Frontend — SPA
 
-## Modelo de domínio
-
-### Entidades
-
-| Tabela | Campos-chave | Observação |
-|---|---|---|
-| `users` | `Email` (único), `Enrollment` (único), `Shift`, `PasswordHash`, `Role`, `Active` | `email VARCHAR(191)` — limite de índice do InnoDB com utf8mb4 |
-| `sessions` | `UserId`, `TokenHash` (SHA-256 hex, único), `ExpiresAt`, `LastUsedAt` | guarda **refresh tokens** (hash), não o access token |
-| `products` | `Name`, `Description`, `Price` (`DECIMAL(10,2)`), `ImageUrl?`, `Available` | seeded: `0b8a3f6e-1c2d-4e5f-8a9b-000000000001` = "Salchipão" |
-| `event_settings` | `SalesOpenAt`, `SalesCloseAt`, `RedemptionOpensAt`, `ForcedPhase`, `UpdatedBy?` | **linha única** (id fixo `11111111-0000-0000-0000-000000000001`) |
-| `orders` | `UserId`, `Total`, `Status`, `PaymentStatus`, `RedeemedAt?`, `RedeemedBy?` | `Total` sempre calculado no servidor; `RedeemedBy` não usado |
-| `order_items` | `OrderId`, `ProductId`, `ProductName` (**snapshot**), `UnitPrice` (**snapshot**), `Quantity` | preço/nome congelados no momento do pedido |
-| `payments` | `OrderId`, `ExternalId?` (id no MP, único), `Status`, `Amount`, `PixCode?`, `PixQrCodeBase64?`, `ExpiresAt`, `ApprovedAt?`, `LastWebhookAt?` | `ExternalId` nulável — a linha nasce como *stub* antes da chamada ao MP |
-| `payment_webhook_events` | `EventId` (id da notificação, único), `PaymentId`, `Action`, `ProcessedAt` | chave de idempotência do webhook |
-| `sac_tickets` | `UserId`, `OrderId?`, `Subject`, `Description`, `Status`, `Priority` | |
-| `sac_messages` | `TicketId`, `SenderId`, `FromStaff`, `Message`, `CreatedAt` | `FromStaff` = snapshot do papel do remetente |
-
-Todo enum é gravado como **string** no banco (`.HasConversion<string>()`) e serializado como
-**nome** no JSON. Todos começam em `1` — o valor `0` (`Undefined`) é um sentinela detectável de
-"não setado".
-
-### Enums
-
-```
-Role                 : Student | Staff                         (Undefined = 0, inválido)
-Shift                : Morning | Afternoon | Evening            (Undefined = 0, inválido)
-OrderStatus          : AwaitingPayment → Paid → Redeemed | Cancelled
-PaymentStatus        : Pending → Approved | Rejected | Expired | Refunded
-ForcedPhase          : Auto | SalesOnly | RedemptionOnly | Closed
-SacTicketStatus      : Open → InProgress → Resolved → Closed
-SacTicketPriority    : Low | Normal | High
-```
-
-### Máquinas de estado
-
-**`Order.Status`** (ciclo do ticket):
-
-```
-AwaitingPayment ──(webhook: pagamento approved)──▶ Paid ──(POST /redeem)──▶ Redeemed
-       │
-       └──(webhook: rejected/expired · ou SalesCutoffWorker no fechamento)──▶ Cancelled
-```
-
-**`Order.PaymentStatus` / `Payment.Status`** seguem o status do Mercado Pago
-(`Pending → Approved / Rejected / Expired / Refunded`), mapeados por
-`MercadoPagoStatusMap`.
+`features/` por domínio (`auth`, `event`, `catalog`, `orders`, `payments`, `sac`), cada um com
+`api.ts` + `hooks.ts` (TanStack Query). `pages/` são finos e compõem as features. Cookie de
+sessão: o cliente nunca vê o token; em `401` tenta `POST /auth/refresh` uma vez, repete a
+request, e só então manda pro `/login`. Guards de rota por papel (`RequireAuth`,
+`RequireStaff`).
 
 ---
 
 ## Ciclo de vida do evento
 
-`EventSettings` é uma linha única com três datas e um override manual. `EventPhaseService`
-calcula, a partir do `TimeProvider` (injetável → testável):
+`event_settings` é **uma linha única** com três datas e um override manual. `EventPhaseService`
+calcula a partir do `TimeProvider` (injetável → testável):
 
 | Campo | Verdade quando |
 |---|---|
 | `salesOpen` | `SalesOpenAt <= agora < SalesCloseAt` |
 | `redemptionOpen` | `agora >= RedemptionOpensAt` |
 
-`ForcedPhase` (setado pelo Staff via `PUT /event`) **sobrepõe** o cálculo por data:
+`forcedPhase` (setado pelo Staff via `PUT /event`) **sobrepõe** o cálculo por data:
 
-| ForcedPhase | salesOpen | redemptionOpen |
+| `forcedPhase` | `salesOpen` | `redemptionOpen` |
 |---|---|---|
 | `Auto` | segue as datas | segue as datas |
 | `SalesOnly` | `true` | `false` |
 | `RedemptionOnly` | `false` | `true` |
 | `Closed` | `false` | `false` |
 
-**Guards** que consomem isso:
+**Guards:**
 
 - `POST /orders` e `POST /orders/{id}/payment` → exigem `salesOpen`, senão **409**.
 - `POST /orders/{id}/redeem` → exige `redemptionOpen`, senão **409**.
 
-**Seed da migration:** `SalesOpenAt = 2026-09-08`, `SalesCloseAt = 2026-09-14 23:59`,
-`RedemptionOpensAt = 2026-09-17`, `ForcedPhase = Auto`. Ajuste com `PUT /event` ou SQL direto.
+`GET /event` devolve `serverTime` — o frontend faz a contagem regressiva contra o **relógio do
+servidor**, não o do cliente. As datas do evento são renderizadas fixas em `America/Sao_Paulo`.
 
-`GET /event` devolve `serverTime` — o frontend faz o *countdown* contra o relógio do servidor,
-não o do cliente.
+> **Antes do evento:** a migration semeia datas de placeholder (`SalesOpenAt = 2026-09-08`
+> etc). Ajuste no painel Staff ou via `PUT /event`.
 
 ---
 
@@ -206,25 +214,20 @@ não o do cliente.
 
 | | Access token (JWT) | Refresh token (opaco) |
 |---|---|---|
-| Formato | JWT assinado (HMAC-SHA256), claims `sub`/`name`/`role`/`iss`/`aud`/`exp` | 32 bytes aleatórios, base64url |
+| Formato | JWT HMAC-SHA256, claims `sub`/`name`/`role`/`iss`/`aud`/`exp` | 32 bytes aleatórios, base64url |
 | Vida | ~15 min | ~30 dias |
 | Validação | assinatura + `exp`, **sem ir ao banco** | hash SHA-256 confere com a linha em `sessions` |
-| Revogável | não (vale até expirar) | sim (apaga a linha) |
-| Transporte | cookie `access_token` (`HttpOnly; Secure; SameSite=Lax`) | cookie `refresh_token` (mesmo + `Path=/auth/refresh`) |
+| Revogável | não | sim (apaga a linha) |
+| Transporte | cookie `access_token` (`HttpOnly; Secure; SameSite=Lax`) | cookie `refresh_token` (+ `Path=/auth/refresh`) |
 
-**Fluxo:**
+**Fluxo:** login emite os dois cookies → o `JwtBearer` lê o JWT **do cookie** e valida offline
+→ access token expira → o cliente chama `POST /auth/refresh` (sozinho), o servidor **rotaciona**
+a sessão (apaga a linha antiga, cria uma nova) e reescreve os cookies → logout apaga a sessão.
 
-1. `POST /auth/login` — valida credenciais + `user.Active`, emite os dois tokens, seta os dois cookies.
-2. Cada request autenticado → o `JwtBearer` lê o JWT **do cookie** (evento `OnMessageReceived`), valida offline.
-3. Access token expira → o cliente chama `POST /auth/refresh` (sozinho, em background). O servidor acha a `session` pelo hash, **rotaciona** (apaga a linha antiga, cria uma nova, emite novo JWT), reescreve os cookies.
-4. `POST /auth/logout` — apaga a `session` e limpa os cookies.
+**Falha de credencial** → **um único 401 genérico** (não vaza quais emails existem).
 
-**Falha de credencial** (email inexistente, senha errada, conta inativa) → **um único 401
-genérico**, para não vazar quais emails existem.
-
-**CSRF:** coberto por `SameSite=Lax` (barra POST cross-site) + allowlist estrita de CORS
-(`Cors:AllowedOrigins` + `AllowCredentials`). Sem fluxo de token antiforgery — decisão
-deliberada para o escopo deste app.
+**CSRF:** `SameSite=Lax` + allowlist estrita de CORS (`Cors:AllowedOrigins` + `AllowCredentials`).
+Sem token antiforgery — decisão deliberada para o escopo.
 
 **Rate limiting:**
 
@@ -233,8 +236,7 @@ deliberada para o escopo deste app.
 | `auth` | 10 req / min por IP | `POST /auth/register`, `POST /auth/login` |
 | `payment` | 5 req / min por usuário | `POST /orders/{id}/payment` |
 
-Atrás de um proxy reverso (nginx/Caddy/ngrok), configure `UseForwardedHeaders` para que
-`RemoteIpAddress` seja o cliente real.
+> Atrás do Caddy, configure `UseForwardedHeaders` para o rate-limit por IP ver o cliente real.
 
 ---
 
@@ -246,108 +248,109 @@ chamadas: `POST /v1/payments` e `GET /v1/payments/{id}`. **Sem estorno** ("pagou
 ### Criar a cobrança — `POST /orders/{id}/payment`
 
 1. Pedido tem que ser do usuário e estar `AwaitingPayment`.
-2. Já existe cobrança `Pending` viva do pedido? Devolve **essa** (nunca cria uma segunda).
+2. Já existe cobrança `Pending` viva? Devolve **essa** (nunca cria uma segunda).
 3. Guard `salesOpen`.
 4. `date_of_expiration = min(agora + 30min, SalesCloseAt)` — a cobrança **não sobrevive** ao
    fechamento das vendas. É isso que dispensa o estorno.
 5. Persiste um **stub** `Payment` (`ExternalId = null`) **antes** de chamar o MP. O `Id` do stub
-   é o `X-Idempotency-Key` — se a chamada ou o save falharem, o retry reutiliza o stub e
-   re-chama o MP com a mesma chave (o MP devolve a mesma cobrança, não duplica).
+   é o `X-Idempotency-Key` — um retry reutiliza o stub, o MP devolve a mesma cobrança.
 6. Chama o MP, preenche `ExternalId` + `PixCode` + `PixQrCodeBase64` + status, salva.
 7. Devolve `{ paymentId, status, pixCode, pixQrCodeBase64, expiresAt, amount }`. O cliente
    renderiza o QR e faz *polling* em `GET /payments/{paymentId}`.
 
 ### Webhook — `POST /webhooks/mercadopago`
 
-`[AllowAnonymous]` — o MP não manda JWT; a **assinatura é a autenticação**.
+`[AllowAnonymous]` — o MP não manda JWT; **a assinatura é a autenticação**.
 
-1. **Valida a assinatura** — header `x-signature` (`ts=...,v1=...`) + `x-request-id`. Reconstrói
-   o manifesto `id:{data.id};request-id:{x-request-id};ts:{ts};`, HMAC-SHA256 com
-   `MercadoPago:WebhookSecret`, compara com `v1` em tempo constante. Não bate → **401**.
+1. **Valida a assinatura** — header `x-signature` (`ts=...,v1=...`) + `x-request-id`; HMAC-SHA256
+   do manifesto com `MercadoPago:WebhookSecret`, comparação em tempo constante. Não bate → **401**.
 2. Não é evento de `payment` → **200** e ignora.
-3. **Idempotência** — o `EventId` (id da notificação) já está em `payment_webhook_events`? → **200** e sai.
-4. **Busca o pagamento no MP** (`GET /v1/payments/{data.id}`) — o corpo do webhook **nunca**
-   traz o status, só o id.
-5. Atualiza o `Payment` e, se o pedido está `AwaitingPayment`:
-   - MP `approved` → `Order.Status = Paid` (**o ticket vira válido**).
+3. **Idempotência** — `EventId` já em `payment_webhook_events`? → **200** e sai.
+4. **Busca o pagamento no MP** — o corpo do webhook **nunca** traz o status, só o id.
+5. Se o pedido está `AwaitingPayment`:
+   - MP `approved` → `Order.Status = Paid` + atribui o **número de retirada** sequencial.
    - MP `rejected` / `expired` → `Order.Status = Cancelled`.
-   - Se o pedido já estava `Cancelled` e veio `approved` → só log de alerta, Staff resolve na
-     mão (raríssimo por causa do cap de expiração).
-6. Grava o `PaymentWebhookEvent` + as mudanças **numa transação**. Retry concorrente que
-   colide no índice único do `EventId` → capturado (a outra retentativa fez trabalho idêntico).
-7. **200** rápido.
+6. Grava tudo **numa transação**. **200** rápido.
 
-### `SalesCutoffWorker` (BackgroundService)
+### `SalesCutoffWorker` (BackgroundService, a cada 2 min)
 
-Roda a cada 2 min. Limpa pedidos que ninguém vai retomar:
-
-- `Payment` `Pending` cujo `ExpiresAt` já passou → `Expired`, pedido → `Cancelled` (a qualquer momento).
+- `Payment` `Pending` vencido → `Expired`, pedido → `Cancelled`.
 - Quando `agora >= SalesCloseAt` → **todo** pedido ainda `AwaitingPayment` → `Cancelled`.
-
-Cria um `IServiceScope` a cada tick (o worker é singleton, o `DbContext` é scoped).
 
 ---
 
 ## Referência da API
 
-Base: `http://localhost:5029` (ou `API_PORT`). Swagger em `/swagger` (dev).
-Auth = cookie `access_token`. **Aluno** = qualquer usuário logado; **Staff** = `Role = Staff`.
+Base local: `http://localhost:5029`. Swagger em `/swagger` (dev).
+Auth = cookie `access_token`. **Aluno** = qualquer logado; **Staff** = `Role = Staff`.
 
-### Auth — `/auth`
+<details>
+<summary><b>Auth · Catálogo · Evento</b></summary>
 
-| Método | Rota | Auth | Corpo / Query | Respostas |
+### `/auth`
+
+| Método | Rota | Auth | Corpo | Respostas |
 |---|---|---|---|---|
-| POST | `/auth/register` | — (rate: `auth`) | `{ name, email, enrollment, shift, password }` | `201` + user · `400` validação · `409` email/matrícula em uso |
-| POST | `/auth/login` | — (rate: `auth`) | `{ email, password }` | `200` + user + **cookies** · `401` credenciais |
-| POST | `/auth/refresh` | cookie `refresh_token` | — | `200` + user + cookies novos · `401` (limpa cookies) |
-| POST | `/auth/logout` | — | — | `204` (idempotente) |
+| POST | `/auth/register` | — (rate `auth`) | `{ name, email, enrollment, shift, password }` | `201` · `400` · `409` (email/matrícula em uso) |
+| POST | `/auth/login` | — (rate `auth`) | `{ email, password }` | `200` + **cookies** · `401` |
+| POST | `/auth/refresh` | cookie `refresh_token` | — | `200` + cookies novos · `401` (limpa cookies) |
+| POST | `/auth/logout` | — | — | `204` |
 | GET | `/auth/me` | aluno | — | `200` `{ id, name, email, enrollment, shift, role }` · `401` |
 
-### Catálogo — `/products`
+### `/products`
 
 | Método | Rota | Auth | Respostas |
 |---|---|---|---|
-| GET | `/products` | público | `200` lista (só `Available == true`) |
+| GET | `/products` | público | `200` (só `Available == true`) |
 | GET | `/products/{id}` | público | `200` · `404` |
 
-### Fase do evento — `/event`
+### `/event`
 
 | Método | Rota | Auth | Corpo | Respostas |
 |---|---|---|---|---|
 | GET | `/event` | público | — | `200` `{ salesOpen, redemptionOpen, phase, forcedPhase, salesOpenAt, salesCloseAt, redemptionOpensAt, serverTime }` |
 | PUT | `/event` | **Staff** | `{ salesOpenAt, salesCloseAt, redemptionOpensAt, forcedPhase }` | `200` snapshot · `400` (`SalesOpenAt >= SalesCloseAt`) · `403` |
 
-### Pedidos — `/orders`
+</details>
+
+<details>
+<summary><b>Pedidos · Pagamento</b></summary>
+
+### `/orders`
 
 | Método | Rota | Auth | Corpo | Respostas |
 |---|---|---|---|---|
-| POST | `/orders` | aluno | `{ items: [{ productId, quantity }] }` | `201` + pedido · `400` (vazio / qtd inválida / >4 itens / produto inexistente) · `409` (venda fechada / produto indisponível) |
+| POST | `/orders` | aluno | `{ items: [{ productId, quantity }] }` | `201` · `400` (vazio / qtd / > 4 itens / produto inexistente) · `409` (venda fechada / indisponível) |
 | GET | `/orders` | aluno | — | `200` — só os meus |
-| GET | `/orders/{id}` | aluno (meu) / Staff (qualquer) | — | `200` · `404` |
-| GET | `/orders/{id}/ticket` | dono / Staff | — | `200` `{ orderId, status, total, redeemedAt?, pickupNumber?, qrValue, items }` · `404` (não pago ainda) |
-| POST | `/orders/{id}/redeem` | **o próprio aluno** | — | `200` ticket resgatado · `409` (resgate não aberto / não pago / já resgatado — com a data) · `404` |
+| GET | `/orders/{id}` | dono / Staff | — | `200` · `404` |
+| GET | `/orders/{id}/ticket` | dono / Staff | — | `200` `{ orderId, status, total, redeemedAt?, pickupNumber?, qrValue, items }` · `404` (não pago) |
+| POST | `/orders/{id}/redeem` | **o próprio aluno** | — | `200` · `409` (retirada não aberta / não pago / já resgatado) · `404` |
 
-O `redeem` é autenticado como o **próprio aluno** — o operador do balcão faz o gesto de
-"arrastar para confirmar" no celular do cliente. A transição é um `UPDATE ... WHERE
-Status = 'Paid'` atômico (à prova de dois scans simultâneos).
+O `redeem` é autenticado como o **próprio aluno** — o operador arrasta o "confirmar" no celular
+do cliente. A transição é um `UPDATE ... WHERE Status = 'Paid'` atômico.
 
-### Pagamento — `/orders/{id}/payment`, `/payments`
+### `/orders/{id}/payment`, `/payments`
 
 | Método | Rota | Auth | Respostas |
 |---|---|---|---|
-| POST | `/orders/{orderId}/payment` | aluno (dono) (rate: `payment`) | `201` `{ paymentId, status, pixCode, pixQrCodeBase64, expiresAt, amount }` · `409` (não `AwaitingPayment` / venda fechada) · `404` · `502` (MP falhou) |
-| GET | `/payments/{id}` | aluno (dono) / Staff | `200` (para *polling* do status) · `404` |
+| POST | `/orders/{orderId}/payment` | dono (rate `payment`) | `201` `{ paymentId, status, pixCode, pixQrCodeBase64, expiresAt, amount }` · `409` · `404` · `502` (MP falhou) |
+| GET | `/payments/{id}` | dono / Staff | `200` (polling) · `404` |
 | POST | `/webhooks/mercadopago` | assinatura MP | `200` sempre (menos `401` assinatura inválida) |
 
-### SAC — `/sac/tickets`
+</details>
+
+<details>
+<summary><b>SAC · Infra</b></summary>
+
+### `/sac/tickets`
 
 | Método | Rota | Auth | Corpo / Query | Respostas |
 |---|---|---|---|---|
 | POST | `/sac/tickets` | aluno | `{ subject, description, orderId? }` | `201` · `400` (orderId não é do usuário) |
 | GET | `/sac/tickets` | aluno | — | `200` — só os meus |
-| GET | `/sac/tickets/all` | **Staff** | `?status=` | `200` — fila com `userName`/`userEmail`/`userEnrollment` do aluno (High primeiro) |
-| GET | `/sac/tickets/{id}` | dono / Staff | — | `200` thread + `userName`/`userEmail`/`userEnrollment` do aluno · `404` |
-| POST | `/sac/tickets/{id}/messages` | dono / Staff | `{ message }` | `200` · `409` (ticket `Closed`) · `404` |
+| GET | `/sac/tickets/all` | **Staff** | `?status=` | `200` — fila + `userName`/`userEmail`/`userEnrollment` (High primeiro) |
+| GET | `/sac/tickets/{id}` | dono / Staff | — | `200` thread + dados do aluno · `404` |
+| POST | `/sac/tickets/{id}/messages` | dono / Staff | `{ message }` | `200` · `409` (`Closed`) · `404` |
 | PATCH | `/sac/tickets/{id}` | **Staff** | `{ status?, priority? }` | `200` · `404` |
 
 Auto-transições: staff responde num `Open` → `InProgress`; aluno responde num `Resolved` → `Open`.
@@ -359,66 +362,88 @@ Auto-transições: staff responde num `Open` → `InProgress`; aluno responde nu
 | GET | `/health` | `200 { status: "ok" }` |
 | GET | `/swagger` | Swagger UI (só em Development) |
 
----
-
-## Configuração
-
-Todos os segredos vêm do `.env` na raiz do `backend/` (gitignored). `.env.example` é o modelo
-versionado. Carregado por `DotNetEnv` **antes** do `WebApplication.CreateBuilder`, exposto via
-`AddEnvironmentVariables()`. O **mesmo `.env`** alimenta o Docker Compose.
-
-| Chave | Para quê |
-|---|---|
-| `DB_NAME`, `DB_USER`, `DB_USER_PASSWORD`, `DB_ROOT_PASSWORD`, `DB_PORT` | usadas pelo Docker Compose para subir o MySQL |
-| `ConnectionStrings__DefaultConnection` | string de conexão que a API lê (`__` vira `:` na config do .NET) |
-| `Jwt__SigningKey` | chave HMAC do JWT (≥ 32 chars) |
-| `Jwt__Issuer`, `Jwt__Audience` | validados em todo request |
-| `MercadoPago__AccessToken` | `TEST-...` no sandbox, token de produção em prod (**mesmo código**) |
-| `MercadoPago__WebhookSecret` | segredo para validar a assinatura do webhook |
-| `MercadoPago__NotificationBaseUrl` | URL pública (ngrok em dev, domínio em prod); a API monta `{base}/webhooks/mercadopago` |
-| `Cors__AllowedOrigins` | origens do frontend, separadas por vírgula |
-| `API_PORT` | porta do host quando a API roda no container (default 5029) |
+</details>
 
 ---
 
-## Como rodar
+## Modelo de domínio
 
-### Requisitos
-- .NET 8 SDK
-- Docker
+<details>
+<summary><b>Tabelas e enums</b></summary>
 
-### Local (API no host, MySQL no container)
+| Tabela | Campos-chave | Observação |
+|---|---|---|
+| `users` | `Email` (único), `Enrollment` (único), `Shift`, `PasswordHash`, `Role`, `Active` | `email VARCHAR(191)` — limite de índice do InnoDB com utf8mb4 |
+| `sessions` | `UserId`, `TokenHash` (SHA-256, único), `ExpiresAt`, `LastUsedAt` | guarda **refresh tokens** (hash) |
+| `products` | `Name`, `Description`, `Price` (`DECIMAL(10,2)`), `Available` | seeded: "Salchipão" |
+| `event_settings` | `SalesOpenAt`, `SalesCloseAt`, `RedemptionOpensAt`, `ForcedPhase` | **linha única** |
+| `orders` | `UserId`, `Total`, `Status`, `PaymentStatus`, `RedeemedAt?`, `PickupNumber?` | `Total` sempre calculado no servidor |
+| `order_items` | `OrderId`, `ProductId`, `ProductName` (**snapshot**), `UnitPrice` (**snapshot**), `Quantity` | preço/nome congelados no pedido |
+| `payments` | `OrderId`, `ExternalId?` (único), `Status`, `Amount`, `PixCode?`, `PixQrCodeBase64?`, `ExpiresAt` | `ExternalId` nulável — nasce como *stub* |
+| `payment_webhook_events` | `EventId` (único), `PaymentId`, `Action`, `ProcessedAt` | idempotência do webhook |
+| `sac_tickets` | `UserId`, `OrderId?`, `Subject`, `Description`, `Status`, `Priority` | |
+| `sac_messages` | `TicketId`, `SenderId`, `FromStaff`, `Message`, `CreatedAt` | `FromStaff` = snapshot do papel |
+
+Todo enum é gravado como **string** (`.HasConversion<string>()`) e serializado como **nome** no
+JSON. Começam em `1` — o `0` (`Undefined`) é sentinela de "não setado".
+
+```
+Role              : Student | Staff
+Shift             : Morning | Afternoon | Evening
+OrderStatus       : AwaitingPayment → Paid → Redeemed | Cancelled
+PaymentStatus     : Pending → Approved | Rejected | Expired | Refunded
+ForcedPhase       : Auto | SalesOnly | RedemptionOnly | Closed
+SacTicketStatus   : Open → InProgress → Resolved → Closed
+SacTicketPriority : Low | Normal | High
+```
+
+**`Order.Status`:**
+
+```
+AwaitingPayment ──(webhook: approved)──▶ Paid ──(POST /redeem)──▶ Redeemed
+       │
+       └──(webhook: rejected/expired · ou SalesCutoffWorker no fechamento)──▶ Cancelled
+```
+
+</details>
+
+---
+
+## Rodando localmente
+
+**Requisitos:** .NET 8 SDK · Node 20+ · Docker
+
+### Backend
 
 ```bash
 cd backend
 cp .env.example .env          # preencha os valores
-docker compose up -d meuSalchipao   # só o MySQL
-dotnet run                    # a API aplica as migrations pendentes no startup
+docker compose up -d meuSalchipao    # só o MySQL
+dotnet run                    # aplica as migrations no startup → :5029
 ```
 
 Swagger: `http://localhost:5029/swagger` · Health: `GET /health`.
+Rode `dotnet run` e o `dotnet ef` **de dentro de `backend/`** (a app carrega o `.env` do cwd).
 
-Rode `dotnet run` e o `dotnet ef` **de dentro de `backend/`** — a app carrega o `.env` do
-diretório atual.
-
-### Tudo em container
+### Frontend
 
 ```bash
-cd backend
-docker compose up --build     # MySQL + API; a API espera o healthcheck do MySQL e migra sozinha
+cd frontend
+npm install
+npm run dev                   # :5173, com proxy /api → :5029
 ```
+
+O `vite.config.ts` faz o proxy de `/api` pro backend em dev (zero CORS) e reescreve o `Path`
+do cookie de refresh.
 
 ### Webhook do Mercado Pago em dev
 
-O MP precisa alcançar `POST /webhooks/mercadopago`. Localmente:
+O MP precisa alcançar `POST /webhooks/mercadopago` — use um túnel:
 
 ```bash
 ngrok http 5029
-# copie a URL https e coloque em MercadoPago__NotificationBaseUrl no .env
+# cole a URL https em MercadoPago__NotificationBaseUrl no .env, e reinicie a API
 ```
-
-Em produção: nginx/Caddy + TLS na frente do Kestrel; `MercadoPago__NotificationBaseUrl` = o
-domínio real.
 
 ### Migrations
 
@@ -428,30 +453,79 @@ dotnet ef migrations add <Nome> -o Migrations
 dotnet ef database update
 ```
 
-A app também roda `Database.Migrate()` no startup (ok para uma instância; num deploy
-multi-instância você rodaria migrations como passo separado).
+A app também roda `Database.Migrate()` no startup (ok para uma instância).
 
 ---
 
-## Estrutura de pastas
+## Deploy
+
+Produção com **Docker Compose + Caddy** (HTTPS automático via Let's Encrypt) na VM.
+
+| Serviço | Papel |
+|---|---|
+| `caddy` | 80/443 — roteia `meusalchipao.online` → `web` e `api.meusalchipao.online` → `api` |
+| `web` | nginx servindo o `dist/` do frontend (SPA fallback) |
+| `api` | Kestrel, `ASPNETCORE_ENVIRONMENT=Production`, só na rede interna |
+| `db` | MySQL, só interno, volume |
+
+Passos (resumo):
+
+1. DNS — `A meusalchipao.online` e `A api.meusalchipao.online` → IP da VM.
+2. Na VM: `git clone`, criar `backend/.env` de produção (ver [`.env.example`](backend/.env.example)).
+3. `docker compose -f docker-compose.prod.yaml up -d --build`.
+4. Painel do Mercado Pago → cadastrar o webhook `https://api.meusalchipao.online/webhooks/mercadopago`,
+   evento `payment`, copiar o secret pro `.env`.
+5. Definir as datas reais do evento (painel Staff) e trocar a senha do usuário Staff semeado.
+
+> O `VITE_API_URL` é **build-time** — entra como build-arg na imagem do frontend.
+
+---
+
+## Configuração (`.env`)
+
+Todos os segredos vêm de `backend/.env` (gitignored). O modelo versionado é
+[`backend/.env.example`](backend/.env.example), com nota **LOCAL vs PROD** em cada bloco. O
+**mesmo `.env`** alimenta a API e o Docker Compose. `__` (duplo underscore) vira `:` na config
+do .NET (`Jwt__SigningKey` → `Jwt:SigningKey`).
+
+| Grupo | Chaves |
+|---|---|
+| Banco | `DB_NAME` · `DB_USER` · `DB_USER_PASSWORD` · `DB_ROOT_PASSWORD` · `DB_PORT` · `ConnectionStrings__DefaultConnection` |
+| API | `ASPNETCORE_ENVIRONMENT` · `API_PORT` |
+| JWT | `Jwt__SigningKey` · `Jwt__Issuer` · `Jwt__Audience` |
+| CORS | `Cors__AllowedOrigins` |
+| Mercado Pago | `MercadoPago__AccessToken` · `MercadoPago__WebhookSecret` · `MercadoPago__NotificationBaseUrl` |
+| Deploy | `DOMAIN_APP` · `DOMAIN_API` · `VITE_API_URL` · `ACME_EMAIL` |
+
+---
+
+## Estrutura do repositório
 
 ```
-backend/
-  Program.cs                       # composition root: DI, pipeline, hosted services
-  Dockerfile · .dockerignore · docker-compose.yaml
-  Migrations/
-  Shared/
-    Persistence/AppDbContext.cs    # 1 DbContext, ApplyConfigurationsFromAssembly
-    Exceptions/                    # ConflictException, NotFoundException, MercadoPagoException, GlobalExceptionHandler
-  Modules/
-    Auth/      Domain(User, Session, Role, Shift) · Services(AuthService, JwtTokenService) · Contracts · Endpoints · Mapping
-    Catalog/   Domain(Product) · Services · Contracts · Endpoints · Mapping
-    Event/     Domain(EventSettings, ForcedPhase) · Services(EventPhaseService) · Contracts · Endpoints
-    Orders/    Domain(Order, OrderItem, OrderStatus, PaymentStatus) · Services(OrderService, RedemptionService) · Contracts · Endpoints · Mapping
-    Payments/  Domain(Payment, PaymentWebhookEvent)
-               Gateway(MercadoPagoClient, MercadoPagoModels, MercadoPagoSignatureValidator, MercadoPagoStatusMap, MpWebhookNotification)
-               Services(PaymentService) · BackgroundJobs(SalesCutoffWorker) · Contracts · Endpoints
-    Sac/       Domain(SacTicket, SacMessage, SacTicketStatus, SacTicketPriority) · Services · Contracts · Endpoints · Mapping
+.
+├─ backend/
+│  ├─ Program.cs                    # composition root: DI, pipeline, hosted services, seed
+│  ├─ Dockerfile · docker-compose.yaml
+│  ├─ Migrations/
+│  ├─ Shared/
+│  │  ├─ Persistence/AppDbContext.cs
+│  │  └─ Exceptions/                # exceções de domínio + GlobalExceptionHandler
+│  └─ Modules/
+│     ├─ Auth/      · Catalog/  · Event/
+│     ├─ Orders/    · Payments/ (Gateway/ · BackgroundJobs/)
+│     └─ Sac/
+│        cada um: Domain/ · Persistence/ · Contracts/ · Services/ · Endpoints/ · Mapping/
+│
+└─ frontend/
+   ├─ index.html · vite.config.ts · Dockerfile
+   ├─ scripts/optimize-assets.mjs   # gera webp + favicons a partir de src/assets/raw/
+   └─ src/
+      ├─ app/         router · providers · guards · layouts
+      ├─ pages/        componentes finos de rota (+ pages/staff/)
+      ├─ features/     auth · event · catalog · orders · payments · sac  (api.ts + hooks.ts)
+      ├─ components/   ui/ (shadcn) · compartilhados
+      ├─ lib/          api.ts (fetch + refresh) · queryClient · format (Intl pt-BR / SP)
+      └─ types/api.ts  DTOs espelhando o backend
 ```
 
 ---
@@ -460,36 +534,34 @@ backend/
 
 | Decisão | Por quê |
 |---|---|
-| **Monólito modular**, não microserviços | 1 produto, 1 evento, poucos endpoints. Microserviços adicionariam transações distribuídas, mensageria, orquestração — sem ganho. Os módulos já são as linhas de corte se um dia precisar. |
-| **`.env` + DotNetEnv**, não `user-secrets` | O `user-secrets` é só do .NET. O Docker Compose lê `.env` nativamente. Um arquivo é fonte única para a API **e** o container. |
-| **`PasswordHasher<T>` sozinho**, não ASP.NET Identity | Só precisamos do hasher (PBKDF2). O Identity imporia seu schema (`AspNetUsers` com ~15 colunas) e seu modelo de sessão, que brigaria com o JWT-em-cookie custom. |
-| **JWT em cookie `HttpOnly`**, não no header `Authorization` | O JS nunca toca o token → XSS não rouba. Custo: CSRF (mitigado por `SameSite=Lax` + CORS). |
-| **Refresh token opaco no banco**, JWT stateless | Combina revogabilidade (apaga a linha = logout) com validação rápida por request (só assinatura). |
-| **`MercadoPagoClient` HTTP tipado**, não o SDK `mercadopago` | O SDK usa config estática global, cria o próprio `HttpClient` (perde `IHttpClientFactory` + resiliência), e é difícil de fakear. A superfície do MP que usamos são 2 chamadas. |
-| **Sem estorno automático** | "Pagou não volta." O `date_of_expiration` limitado ao `SalesCloseAt` torna "pagamento aprovado depois do fechamento" praticamente impossível. |
-| **Sem token antiforgery** | `SameSite=Lax` + allowlist de CORS fecham os vetores práticos de CSRF para um SPA de origem conhecida. |
-| **Snapshot de nome/preço em `OrderItem`** | O pedido é registro histórico. Se o preço mudar semana que vem, o pedido antigo ainda reflete o que foi pago (e o que o MP recebeu). |
-| **`Total` calculado no servidor** | O `CreateOrderRequest` não tem campo `total`. Senão alguém pediria 50 salchipões e mandaria `total: 0.01`. |
-| **`TimeProvider` injetado** | Decisões de fase e expiração dependem de "agora" — injetável = testável ("finja que é dia 20"). |
-| **Auto-migrate no startup** | `docker compose up` de um banco limpo simplesmente funciona. |
+| **Monólito modular**, não microserviços | 1 produto, 1 evento, poucos endpoints. Microserviços trariam transações distribuídas e orquestração sem ganho. Os módulos já são as linhas de corte. |
+| **`.env` + DotNetEnv**, não `user-secrets` | O Compose lê `.env` nativamente. Um arquivo é fonte única para API **e** container. |
+| **`PasswordHasher<T>` sozinho**, não ASP.NET Identity | Só precisamos do hasher. O Identity imporia schema e modelo de sessão que brigariam com o JWT-em-cookie custom. |
+| **JWT em cookie `HttpOnly`**, não header `Authorization` | O JS nunca toca o token → XSS não rouba. Custo: CSRF (mitigado por `SameSite=Lax` + CORS). |
+| **Refresh token opaco no banco** + JWT stateless | Revogabilidade (apaga a linha) com validação rápida por request (só assinatura). |
+| **`MercadoPagoClient` HTTP tipado**, não o SDK | O SDK usa config global estática, cria o próprio `HttpClient` e é difícil de fakear. Usamos 2 chamadas. |
+| **Sem estorno automático** | "Pagou não volta." O `date_of_expiration` limitado ao `SalesCloseAt` torna "aprovado depois do fechamento" quase impossível. |
+| **Snapshot de nome/preço em `OrderItem`** | O pedido é registro histórico — reflete o que foi pago mesmo se o preço mudar depois. |
+| **`Total` calculado no servidor** | O request não tem campo `total`. Senão alguém pediria 50 e mandaria `total: 0.01`. |
+| **`TimeProvider` injetado** | Decisões de fase/expiração dependem de "agora" — injetável = testável. |
+| **Auto-migrate + seed no startup** | `docker compose up` de um banco limpo simplesmente funciona (schema + produto + Staff). |
+| **Front: TanStack Query como store** | Estado de servidor com cache, polling e optimistic sem Redux. `useState` só pra UI local. |
+| **Front: shadcn/ui (componentes copiados)** | Código que a gente edita, Tailwind legível — não uma caixa-preta de theming. |
+| **Datas do evento em `America/Sao_Paulo` fixo** | O aluno vê a data certa independente do fuso do aparelho; o backend guarda UTC. |
 
 ---
 
-## Lacunas conhecidas / próximos passos
+## Lacunas conhecidas
 
 - **Testes automatizados + CI** — não existem. Prioridade: `EventPhaseService` (fronteiras de
-  data com `FakeTimeProvider`), `MercadoPagoStatusMap`, idempotência do webhook (fake do
-  `MercadoPagoClient`), cálculo de total, transições do `redeem`, `AssertConfigurationIsValid`
-  dos profiles do AutoMapper. Integração com `WebApplicationFactory` + `Testcontainers.MySql`.
-- **Caminho `approved` do webhook** — validado só até `payment.created` no sandbox (o simulador
-  de Pix do MP não estava disponível). O código do `approved → Paid` é determinístico; um teste
-  com fake do client cobre isso.
-- **`UseForwardedHeaders`** — necessário antes de prod para o rate-limit por IP funcionar atrás
-  do nginx/Caddy.
-- **Reconciliação com o MP no `SalesCutoffWorker`** — varrer `Payment` `Pending` e consultar o
-  MP, caso um webhook `approved` se perca.
-- **Health-check com ping ao banco** (`AddDbContextCheck`), **Swagger com auth**, **logging
-  estruturado** (Serilog).
-- **`AddXModule(IServiceCollection)` por módulo** — hoje o `Program.cs` é uma lista plana.
-- **`SaveChangesInterceptor` de auditoria** — hoje cada service seta `CreatedAt`/`UpdatedAt` na mão.
-- **`payments.PreferenceId` / `CheckoutUrl`** — colunas do diagrama original, não usadas (Pix transparente).
+  data com `FakeTimeProvider`), `MercadoPagoStatusMap`, idempotência do webhook, cálculo de
+  total, transições do `redeem`, `AssertConfigurationIsValid` dos profiles.
+- **Caminho `approved` do webhook** — validado só até `payment.created` no sandbox; o código
+  `approved → Paid` é determinístico (um teste com fake do client cobre).
+- **`UseForwardedHeaders`** — necessário em prod pro rate-limit por IP funcionar atrás do Caddy.
+- **Reconciliação com o MP** no `SalesCutoffWorker` — varrer `Payment` `Pending` caso um
+  webhook `approved` se perca.
+- **`PickupNumber` sem constraint de unicidade** — `MAX+1` best-effort; o webhook é serializado
+  na prática, colisão seria cosmética.
+- **Health-check com ping ao banco**, **Swagger com auth**, **logging estruturado** (Serilog).
+- **Sem edição de perfil** — `/auth/me` é só leitura; não há `PUT`.

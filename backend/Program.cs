@@ -17,6 +17,7 @@ using backend.Shared.Exceptions;
 using backend.Shared.Persistence;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -105,6 +106,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Atrás do Caddy (rede interna do compose) o IP/scheme reais vêm nos headers
+// X-Forwarded-*. Sem isto o rate-limit por IP veria só o IP do proxy.
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // a API só é alcançável pelo Caddy; confiamos em qualquer proxy da rede interna
+    o.KnownNetworks.Clear();
+    o.KnownProxies.Clear();
+});
+
 var corsOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? "")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -134,6 +146,7 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {

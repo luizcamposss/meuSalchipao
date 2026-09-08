@@ -1,0 +1,74 @@
+# Produção — Caddy (HTTPS) + frontend (nginx) + API (.NET) + MySQL.
+#
+# Na VM:
+#   cp .env.example .env      # preencha
+#   docker compose -f docker-compose.prod.yaml up -d --build
+#
+# Só o Caddy expõe portas no host (80/443). API, frontend e banco ficam
+# na rede interna do compose.
+
+name: meusalchipao
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN_APP: ${DOMAIN_APP:?defina no .env}
+      DOMAIN_API: ${DOMAIN_API:?defina no .env}
+      ACME_EMAIL: ${ACME_EMAIL:?defina no .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:?defina no .env}
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Server=db;Port=3306;Database=${DB_NAME:?};User=${DB_USER:?};Password=${DB_USER_PASSWORD:?};"
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?defina no .env}
+      MYSQL_DATABASE: ${DB_NAME:?defina no .env}
+      MYSQL_USER: ${DB_USER:?defina no .env}
+      MYSQL_PASSWORD: ${DB_USER_PASSWORD:?defina no .env}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db_data:
