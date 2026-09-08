@@ -194,6 +194,10 @@ export interface SacTicketResponse {
   createdAt: string
   updatedAt: string
   messages: SacMessageResponse[]
+  /** dados do aluno — vêm no GET por id e na fila (Staff) */
+  userName?: string | null
+  userEmail?: string | null
+  userEnrollment?: string | null
 }
 
 // ---- erro (RFC 7807 ProblemDetails) --------------------------

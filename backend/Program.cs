@@ -166,18 +166,18 @@ using (var scope = app.Services.CreateScope())
             Id = Guid.NewGuid(),
             Name = "Equipe Salchipão",
             Email = "staff@salchipao.com",
-            Enrollment = "staff01!",
+            Enrollment = "STAFF001",
             Shift = Shift.Morning,
             Role = Role.Staff,
             Active = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
-        staff.PasswordHash = hasher.HashPassword(staff, "salchipao123");
+        staff.PasswordHash = hasher.HashPassword(staff, "staff01!");
         db.Users.Add(staff);
         db.SaveChanges();
         app.Logger.LogInformation(
-            "Seeded staff user {Email} (senha: salchipao123)", staff.Email);
+            "Seeded staff user {Email} (senha: staff01)", staff.Email);
     }
 }
 

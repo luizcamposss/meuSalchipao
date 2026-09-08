@@ -41,4 +41,10 @@ public record SacTicketResponse(
     SacTicketPriority Priority,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    List<SacMessageResponse> Messages);
+    List<SacMessageResponse> Messages)
+{
+    /// <summary>Dados do aluno que abriu o chamado (preenchido no GET por id e na fila).</summary>
+    public string? UserName { get; init; }
+    public string? UserEmail { get; init; }
+    public string? UserEnrollment { get; init; }
+}

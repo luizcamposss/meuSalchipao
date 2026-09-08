@@ -345,8 +345,8 @@ Status = 'Paid'` atômico (à prova de dois scans simultâneos).
 |---|---|---|---|---|
 | POST | `/sac/tickets` | aluno | `{ subject, description, orderId? }` | `201` · `400` (orderId não é do usuário) |
 | GET | `/sac/tickets` | aluno | — | `200` — só os meus |
-| GET | `/sac/tickets/all` | **Staff** | `?status=` | `200` — fila (High primeiro, mais antigo dentro da prioridade) |
-| GET | `/sac/tickets/{id}` | dono / Staff | — | `200` com a thread de mensagens · `404` |
+| GET | `/sac/tickets/all` | **Staff** | `?status=` | `200` — fila com `userName`/`userEmail`/`userEnrollment` do aluno (High primeiro) |
+| GET | `/sac/tickets/{id}` | dono / Staff | — | `200` thread + `userName`/`userEmail`/`userEnrollment` do aluno · `404` |
 | POST | `/sac/tickets/{id}/messages` | dono / Staff | `{ message }` | `200` · `409` (ticket `Closed`) · `404` |
 | PATCH | `/sac/tickets/{id}` | **Staff** | `{ status?, priority? }` | `200` · `404` |
 
