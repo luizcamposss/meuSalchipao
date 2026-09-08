@@ -25,7 +25,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Enrollment)
             .IsRequired()
-            .HasMaxLength(8);
+            .HasMaxLength(10);
 
         builder.HasIndex(u => u.Enrollment)
             .IsUnique();

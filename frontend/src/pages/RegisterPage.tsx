@@ -143,8 +143,8 @@ export function RegisterPage() {
                   <FormControl>
                     <Input
                       inputMode="numeric"
-                      maxLength={8}
-                      placeholder="12345678"
+                      maxLength={10}
+                      placeholder="1234567890"
                       {...field}
                     />
                   </FormControl>
