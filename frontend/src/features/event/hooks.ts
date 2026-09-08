@@ -1,0 +1,56 @@
+import { useQuery } from '@tanstack/react-query'
+
+import type { EventPhaseSnapshot } from '@/types/api'
+
+import { eventApi } from './api'
+
+export const eventKeys = {
+  snapshot: ['event'] as const,
+}
+
+/**
+ * Fase do evento. `refetchInterval` mantém a fase e o "abre em X" vivos sem
+ * precisar recarregar a página (o backend troca de fase por data, sem deploy).
+ */
+export function useEvent() {
+  return useQuery({
+    queryKey: eventKeys.snapshot,
+    queryFn: ({ signal }) => eventApi.get(signal),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
+}
+
+export type PhaseMode = 'before' | 'selling' | 'redeeming' | 'closed'
+
+const MODE_BY_PHASE: Record<EventPhaseSnapshot['phase'], PhaseMode> = {
+  BeforeSales: 'before',
+  SalesOpen: 'selling',
+  RedemptionOnly: 'redeeming',
+  SalesClosed: 'closed',
+}
+
+export interface Phase {
+  mode: PhaseMode
+  snapshot: EventPhaseSnapshot
+  /** relógio do servidor (usar em vez de `new Date()` para countdown) */
+  now: string
+}
+
+/** Deriva a fase a partir do snapshot. `phase` é `null` enquanto carrega ou em erro. */
+export function usePhase() {
+  const query = useEvent()
+  const phase: Phase | null = query.data
+    ? {
+        mode: MODE_BY_PHASE[query.data.phase],
+        snapshot: query.data,
+        now: query.data.serverTime,
+      }
+    : null
+  return {
+    phase,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+  }
+}

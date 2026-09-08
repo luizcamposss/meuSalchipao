@@ -72,6 +72,7 @@ public class EventPhaseService : IEventPhaseService
             salesOpen,
             redemptionOpen,
             phase,
+            settings.SalesOpenAt,
             settings.SalesCloseAt,
             settings.RedemptionOpensAt,
             now);

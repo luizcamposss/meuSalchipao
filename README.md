@@ -314,7 +314,7 @@ Auth = cookie `access_token`. **Aluno** = qualquer usuário logado; **Staff** = 
 
 | Método | Rota | Auth | Corpo | Respostas |
 |---|---|---|---|---|
-| GET | `/event` | público | — | `200` `{ salesOpen, redemptionOpen, phase, salesCloseAt, redemptionOpensAt, serverTime }` |
+| GET | `/event` | público | — | `200` `{ salesOpen, redemptionOpen, phase, salesOpenAt, salesCloseAt, redemptionOpensAt, serverTime }` |
 | PUT | `/event` | **Staff** | `{ salesOpenAt, salesCloseAt, redemptionOpensAt, forcedPhase }` | `200` snapshot · `400` (`SalesOpenAt >= SalesCloseAt`) · `403` |
 
 ### Pedidos — `/orders`
