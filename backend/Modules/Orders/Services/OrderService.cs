@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using AutoMapper;
+using backend.Modules.Event.Domain;
 using backend.Modules.Event.Services;
 using backend.Modules.Orders.Contracts;
 using backend.Modules.Orders.Domain;
@@ -55,6 +56,13 @@ public class OrderService : IOrderService
 
         if (products.Any(p => !p.Available))
             throw new ConflictException("One or more products are not available.");
+
+        if (phase.MorningSale.Open || phase.AfternoonSale.Open)
+        {
+            var kind = phase.MorningSale.Open ? SaleWindowKind.Morning : SaleWindowKind.Afternoon;
+            if (!await events.TryReserveSaleWindowSlotAsync(kind, ct))
+                throw new ConflictException("Vagas esgotadas para este horário.");
+        }
 
         var now = clock.GetUtcNow().UtcDateTime;
         var order = new Order
