@@ -471,7 +471,7 @@ Produção com **Docker Compose + Caddy** (HTTPS automático via Let's Encrypt) 
 Passos (resumo):
 
 1. DNS — `A meusalchipao.online` e `A api.meusalchipao.online` → IP da VM.
-2. Na VM: `git clone`, criar `backend/.env` de produção (ver [`.env.example`](backend/.env.example)).
+2. Na VM: `git clone`, criar o `.env` de produção **na raiz do repo** (ver [`.env.example`](.env.example)) — é esse arquivo que o `docker-compose.prod.yaml` lê, não o `backend/.env`.
 3. `docker compose -f docker-compose.prod.yaml up -d --build`.
 4. Painel do Mercado Pago → cadastrar o webhook `https://api.meusalchipao.online/webhooks/mercadopago`,
    evento `payment`, copiar o secret pro `.env`.
@@ -483,10 +483,17 @@ Passos (resumo):
 
 ## Configuração (`.env`)
 
-Todos os segredos vêm de `backend/.env` (gitignored). O modelo versionado é
-[`backend/.env.example`](backend/.env.example), com nota **LOCAL vs PROD** em cada bloco. O
-**mesmo `.env`** alimenta a API e o Docker Compose. `__` (duplo underscore) vira `:` na config
-do .NET (`Jwt__SigningKey` → `Jwt:SigningKey`).
+**Dois arquivos `.env` diferentes, não confundir:**
+
+- **`backend/.env`** (gitignored) — desenvolvimento local: alimenta `dotnet run` e o
+  `backend/docker-compose.yaml` (só o container do MySQL). Modelo:
+  [`backend/.env.example`](backend/.env.example).
+- **`.env` na raiz do repo** (gitignored) — produção: alimenta o `docker-compose.prod.yaml`
+  inteiro (Caddy, frontend, API, banco). Modelo: [`.env.example`](.env.example).
+
+Em ambos, `__` (duplo underscore) vira `:` na config do .NET (`Jwt__SigningKey` → `Jwt:SigningKey`).
+A tabela abaixo é do `backend/.env` (dev local); o `.env.example` da raiz documenta as chaves
+equivalentes de produção.
 
 | Grupo | Chaves |
 |---|---|
