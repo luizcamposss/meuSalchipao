@@ -91,6 +91,14 @@ export interface Product {
 
 // ---- event ---------------------------------------------------------
 
+export interface SaleWindowSnapshot {
+  open: boolean
+  opensAt: string
+  closesAt: string
+  cap: number
+  remaining: number
+}
+
 export interface EventPhaseSnapshot {
   salesOpen: boolean
   redemptionOpen: boolean
@@ -100,6 +108,8 @@ export interface EventPhaseSnapshot {
   salesCloseAt: string
   redemptionOpensAt: string
   serverTime: string
+  morningSale: SaleWindowSnapshot
+  afternoonSale: SaleWindowSnapshot
 }
 
 export interface UpdateEventRequest {
@@ -107,6 +117,12 @@ export interface UpdateEventRequest {
   salesCloseAt: string
   redemptionOpensAt: string
   forcedPhase: ForcedPhase
+  morningSaleOpensAt: string
+  morningSaleClosesAt: string
+  morningSaleCap: number
+  afternoonSaleOpensAt: string
+  afternoonSaleClosesAt: string
+  afternoonSaleCap: number
 }
 
 // ---- orders --------------------------------------------------------

@@ -22,6 +22,25 @@ function HomeCta({ phase }: { phase: Phase }) {
     )
   }
   if (phase.mode === 'redeeming') {
+    const activeWindow = phase.snapshot.morningSale.open
+      ? phase.snapshot.morningSale
+      : phase.snapshot.afternoonSale.open
+        ? phase.snapshot.afternoonSale
+        : null
+
+    if (activeWindow) {
+      return (
+        <div className="grid gap-2">
+          <p className="text-center text-sm font-medium text-foreground">
+            Venda especial de hoje: restam {activeWindow.remaining} vagas!
+          </p>
+          <Button asChild className={CTA_CLASS}>
+            <Link to="/carrinho">Comprar agora</Link>
+          </Button>
+        </div>
+      )
+    }
+
     return (
       <Button asChild className={CTA_CLASS}>
         <Link to="/pedidos">Ver meus pedidos</Link>

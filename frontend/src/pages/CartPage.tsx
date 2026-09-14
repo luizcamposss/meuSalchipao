@@ -36,7 +36,12 @@ export function CartPage() {
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
 
-  const selling = phase?.mode === 'selling'
+  const activeWindow = phase?.snapshot.morningSale.open
+    ? phase.snapshot.morningSale
+    : phase?.snapshot.afternoonSale.open
+      ? phase.snapshot.afternoonSale
+      : null
+  const selling = phase?.mode === 'selling' || !!activeWindow
   const atMax = qty >= MAX_QTY
 
   const ctaLabel = selling
