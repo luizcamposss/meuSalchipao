@@ -122,7 +122,7 @@ export function toInputLocal(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).formatToParts(new Date(iso))
+  }).formatToParts(toDate(iso))
   const g = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}`
 }

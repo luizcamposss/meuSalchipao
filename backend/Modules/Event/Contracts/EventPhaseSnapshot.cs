@@ -2,6 +2,15 @@ using backend.Modules.Event.Domain;
 
 namespace backend.Modules.Event.Contracts;
 
+public record SaleWindowResponse(
+    Guid Id,
+    string Label,
+    bool Open,
+    DateTime OpensAt,
+    DateTime ClosesAt,
+    int Cap,
+    int Remaining);
+
 public record EventPhaseSnapshot(
     bool SalesOpen,
     bool RedemptionOpen,
@@ -10,4 +19,5 @@ public record EventPhaseSnapshot(
     DateTime SalesOpenAt,
     DateTime SalesCloseAt,
     DateTime RedemptionOpensAt,
-    DateTime ServerTime);
+    DateTime ServerTime,
+    IReadOnlyList<SaleWindowResponse> SaleWindows);

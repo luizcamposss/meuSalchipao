@@ -91,6 +91,16 @@ export interface Product {
 
 // ---- event ---------------------------------------------------------
 
+export interface SaleWindowResponse {
+  id: string
+  label: string
+  open: boolean
+  opensAt: string
+  closesAt: string
+  cap: number
+  remaining: number
+}
+
 export interface EventPhaseSnapshot {
   salesOpen: boolean
   redemptionOpen: boolean
@@ -100,6 +110,7 @@ export interface EventPhaseSnapshot {
   salesCloseAt: string
   redemptionOpensAt: string
   serverTime: string
+  saleWindows: SaleWindowResponse[]
 }
 
 export interface UpdateEventRequest {
@@ -107,6 +118,20 @@ export interface UpdateEventRequest {
   salesCloseAt: string
   redemptionOpensAt: string
   forcedPhase: ForcedPhase
+}
+
+export interface CreateSaleWindowRequest {
+  label: string
+  opensAt: string
+  closesAt: string
+  cap: number
+}
+
+export interface UpdateSaleWindowRequest {
+  label: string
+  opensAt: string
+  closesAt: string
+  cap: number
 }
 
 // ---- orders --------------------------------------------------------

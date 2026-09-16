@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useMe } from '@/features/auth/hooks'
 import { EventHero } from '@/features/event/components/EventHero'
 import { PickupInfo } from '@/features/event/components/PickupInfo'
+import { SaleWindowCard } from '@/features/event/components/SaleWindowCard'
 import { type Phase, usePhase } from '@/features/event/hooks'
 import { dayMonth, relativeDay } from '@/lib/format'
 
@@ -46,6 +47,7 @@ export function HomePage() {
   const { data: me } = useMe()
   const { phase, isError, refetch } = usePhase()
   const firstName = me?.name.split(' ')[0] ?? ''
+  const activeWindow = phase?.snapshot.saleWindows.find((w) => w.open)
 
   return (
     <div className="grid gap-5">
@@ -63,6 +65,7 @@ export function HomePage() {
       {phase ? (
         <>
           <EventHero phase={phase} />
+          {activeWindow ? <SaleWindowCard window={activeWindow} /> : null}
           <PickupInfo phase={phase} />
           <HomeCta phase={phase} />
           {(phase.mode === 'before' || phase.mode === 'selling') && (

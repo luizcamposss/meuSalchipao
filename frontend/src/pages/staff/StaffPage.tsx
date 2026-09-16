@@ -11,7 +11,14 @@ import * as React from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useEvent, useUpdateEvent } from '@/features/event/hooks'
+import {
+  useCreateSaleWindow,
+  useDeleteSaleWindow,
+  useEvent,
+  useEventLive,
+  useUpdateEvent,
+  useUpdateSaleWindow,
+} from '@/features/event/hooks'
 import { useOrderStats } from '@/features/orders/hooks'
 import { useSacQueue } from '@/features/sac/hooks'
 import { STATUS_CLASS, STATUS_LABEL } from '@/features/sac/labels'
@@ -29,6 +36,7 @@ import type {
   OrderStats,
   SacTicketResponse,
   SacTicketStatus,
+  SaleWindowResponse,
 } from '@/types/api'
 
 import { RedeemMeter, SalesBarChart } from './SummaryCharts'
@@ -524,12 +532,358 @@ function EventControl() {
   return <EventForm snapshot={data} />
 }
 
+// ---- venda avulsa do dia -------------------------------------------
+
+function SaleWindowMeter({ cap, remaining }: { cap: number; remaining: number }) {
+  const pct = cap > 0 ? Math.min(100, Math.round(((cap - remaining) / cap) * 100)) : 0
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  )
+}
+
+function SaleWindowEditForm({
+  window: w,
+  onDone,
+}: {
+  window: SaleWindowResponse
+  onDone: () => void
+}) {
+  const update = useUpdateSaleWindow()
+  const [label, setLabel] = React.useState(w.label)
+  const [opensAt, setOpensAt] = React.useState(() => toInputLocal(w.opensAt))
+  const [closesAt, setClosesAt] = React.useState(() => toInputLocal(w.closesAt))
+  const [cap, setCap] = React.useState(String(w.cap))
+  const [error, setError] = React.useState<string | null>(null)
+
+  const field =
+    'h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    try {
+      await update.mutateAsync({
+        id: w.id,
+        body: {
+          label,
+          opensAt: fromInputLocal(opensAt),
+          closesAt: fromInputLocal(closesAt),
+          cap: Number(cap),
+        },
+      })
+      onDone()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Não foi possível salvar.')
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="flex flex-col gap-3">
+      <input
+        className={field}
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="Nome da janela"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="datetime-local"
+          className={field}
+          value={opensAt}
+          onChange={(e) => setOpensAt(e.target.value)}
+        />
+        <input
+          type="datetime-local"
+          className={field}
+          value={closesAt}
+          onChange={(e) => setClosesAt(e.target.value)}
+        />
+      </div>
+      <input
+        type="number"
+        min={1}
+        className={field}
+        value={cap}
+        onChange={(e) => setCap(e.target.value)}
+        placeholder="Cota"
+      />
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          className="h-9 flex-1 rounded-lg text-sm"
+          disabled={update.isPending}
+        >
+          {update.isPending ? 'Salvando…' : 'Salvar'}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-9 rounded-lg border-[1.5px] text-sm"
+          onClick={onDone}
+        >
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function SaleWindowRow({ window: w }: { window: SaleWindowResponse }) {
+  const [editing, setEditing] = React.useState(false)
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false)
+  const del = useDeleteSaleWindow()
+
+  if (editing) {
+    return (
+      <div className="rounded-2xl bg-card p-4 shadow-sm ring-1 ring-border/60">
+        <SaleWindowEditForm window={w} onDone={() => setEditing(false)} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5 rounded-2xl bg-card p-4 shadow-sm ring-1 ring-border/60">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-bold text-foreground">{w.label}</p>
+          <p className="text-xs text-muted-foreground">
+            {formatDateTime(w.opensAt)} — {formatDateTime(w.closesAt)}
+          </p>
+        </div>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold',
+            w.open
+              ? 'bg-flag-green/15 text-flag-green'
+              : 'bg-secondary text-secondary-foreground',
+          )}
+        >
+          {w.open ? 'Aberta agora' : 'Fechada'}
+        </span>
+      </div>
+
+      <div>
+        <p className="mb-1 text-xs font-semibold tabular-nums text-foreground">
+          {w.remaining} de {w.cap} vagas
+        </p>
+        <SaleWindowMeter cap={w.cap} remaining={w.remaining} />
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-8 flex-1 rounded-lg border-[1.5px] text-xs"
+          onClick={() => setEditing(true)}
+        >
+          Editar
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            'h-8 flex-1 rounded-lg border-[1.5px] text-xs',
+            confirmingDelete && 'border-destructive text-destructive',
+          )}
+          disabled={del.isPending}
+          onClick={() => {
+            if (!confirmingDelete) {
+              setConfirmingDelete(true)
+              return
+            }
+            del.mutate(w.id)
+          }}
+        >
+          {del.isPending
+            ? 'Excluindo…'
+            : confirmingDelete
+              ? 'Confirmar exclusão?'
+              : 'Excluir'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function CreateSaleWindowForm() {
+  const create = useCreateSaleWindow()
+  const [label, setLabel] = React.useState('')
+  const [opensAt, setOpensAt] = React.useState('')
+  const [closesAt, setClosesAt] = React.useState('')
+  const [cap, setCap] = React.useState('50')
+  const [error, setError] = React.useState<string | null>(null)
+
+  const field =
+    'h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!label.trim() || !opensAt || !closesAt) {
+      setError('Preenche nome, início e fim.')
+      return
+    }
+    try {
+      await create.mutateAsync({
+        label: label.trim(),
+        opensAt: fromInputLocal(opensAt),
+        closesAt: fromInputLocal(closesAt),
+        cap: Number(cap),
+      })
+      setLabel('')
+      setOpensAt('')
+      setClosesAt('')
+      setCap('50')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Não foi possível criar.')
+    }
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-sm ring-1 ring-dashed ring-border"
+    >
+      <p className="text-sm font-bold text-foreground">Nova janela</p>
+      <input
+        className={field}
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="Nome (ex: Manhã)"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <label className="grid gap-1">
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            Abre
+          </span>
+          <input
+            type="datetime-local"
+            className={field}
+            value={opensAt}
+            onChange={(e) => setOpensAt(e.target.value)}
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            Fecha
+          </span>
+          <input
+            type="datetime-local"
+            className={field}
+            value={closesAt}
+            onChange={(e) => setClosesAt(e.target.value)}
+          />
+        </label>
+      </div>
+      <label className="grid gap-1">
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground">
+          Cota
+        </span>
+        <input
+          type="number"
+          min={1}
+          className={field}
+          value={cap}
+          onChange={(e) => setCap(e.target.value)}
+        />
+      </label>
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <Button
+        type="submit"
+        className="h-9 rounded-lg text-sm"
+        disabled={create.isPending}
+      >
+        {create.isPending ? 'Criando…' : 'Adicionar janela'}
+      </Button>
+    </form>
+  )
+}
+
+function SaleWindowsPanel() {
+  const { data, isLoading, isError, refetch, isFetching } = useEventLive()
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Skeleton className="h-56 rounded-2xl" />
+        <Skeleton className="h-56 rounded-2xl" />
+      </div>
+    )
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl bg-card p-6 text-center shadow-sm">
+        <p className="text-sm text-muted-foreground">
+          Não foi possível carregar as janelas de venda.
+        </p>
+        <Button
+          variant="outline"
+          className="h-9 rounded-xl border-[1.5px] border-primary text-primary hover:bg-primary/5 hover:text-primary"
+          onClick={() => refetch()}
+        >
+          <RotateCwIcon className="size-4" />
+          Tentar de novo
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex max-w-3xl flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <span className="relative flex size-2">
+          <span
+            className={cn(
+              'absolute inline-flex size-full rounded-full bg-chart-redeemed/60',
+              isFetching && 'animate-ping',
+            )}
+          />
+          <span className="relative inline-flex size-2 rounded-full bg-chart-redeemed" />
+        </span>
+        <span className="text-xs text-muted-foreground">
+          Ao vivo · atualiza a cada 5s
+        </span>
+      </div>
+
+      {data.saleWindows.length === 0 ? (
+        <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
+          Nenhuma janela cadastrada ainda.
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {data.saleWindows.map((w) => (
+            <SaleWindowRow key={w.id} window={w} />
+          ))}
+        </div>
+      )}
+
+      <CreateSaleWindowForm />
+    </div>
+  )
+}
+
 // ---- página ------------------------------------------------------
 
 const TABS = [
   { value: 'summary', label: 'Resumo' },
   { value: 'sac', label: 'Atendimento' },
   { value: 'event', label: 'Evento' },
+  { value: 'walkup', label: 'Venda do dia' },
 ] as const
 
 type StaffTab = (typeof TABS)[number]['value']
@@ -561,10 +915,12 @@ export function StaffPage() {
         <SummaryDashboard />
       ) : tab === 'sac' ? (
         <SacQueue />
-      ) : (
+      ) : tab === 'event' ? (
         <div className="max-w-lg">
           <EventControl />
         </div>
+      ) : (
+        <SaleWindowsPanel />
       )}
     </div>
   )

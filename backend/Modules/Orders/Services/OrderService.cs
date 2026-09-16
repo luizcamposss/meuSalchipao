@@ -56,6 +56,10 @@ public class OrderService : IOrderService
         if (products.Any(p => !p.Available))
             throw new ConflictException("One or more products are not available.");
 
+        var activeWindow = phase.SaleWindows.FirstOrDefault(w => w.Open);
+        if (activeWindow is not null && !await events.TryReserveSlotAsync(activeWindow.Id, ct))
+            throw new ConflictException("Vagas esgotadas para este horário.");
+
         var now = clock.GetUtcNow().UtcDateTime;
         var order = new Order
         {

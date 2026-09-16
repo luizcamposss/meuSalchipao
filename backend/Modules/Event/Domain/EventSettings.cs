@@ -9,4 +9,6 @@ public class EventSettings
     public ForcedPhase ForcedPhase { get; set; }
     public DateTime UpdatedAt { get; set; }
     public Guid? UpdatedBy { get; set; }
+
+    public List<SaleWindow> SaleWindows { get; set; } = [];
 }
