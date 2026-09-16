@@ -180,6 +180,13 @@ export interface DailySales {
   revenue: number
 }
 
+/** uma barra do gráfico "salchipões por turno" (turno de quem comprou) */
+export interface ShiftSales {
+  shift: Shift
+  salchipos: number
+  revenue: number
+}
+
 /** GET /orders/stats — números do evento para o painel da equipe (Staff). */
 export interface OrderStats {
   /** salchipões vendidos (soma das quantidades de pedidos pagos) */
@@ -194,6 +201,8 @@ export interface OrderStats {
   ticketsGenerated: number
   /** vendas por dia, em ordem crescente */
   byDay: DailySales[]
+  /** vendas por turno de quem comprou */
+  byShift: ShiftSales[]
 }
 
 // ---- payments ----------------------------------------------------

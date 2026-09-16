@@ -126,7 +126,13 @@ public class OrderService : IOrderService
         var paidRows = await _context.Orders
             .AsNoTracking()
             .Where(o => o.Status == OrderStatus.Paid || o.Status == OrderStatus.Redeemed)
-            .Select(o => new { o.CreatedAt, Qty = o.Items.Sum(i => i.Quantity), o.Total })
+            .Join(_context.Users.AsNoTracking(), o => o.UserId, u => u.Id, (o, u) => new
+            {
+                o.CreatedAt,
+                Qty = o.Items.Sum(i => i.Quantity),
+                o.Total,
+                u.Shift,
+            })
             .ToListAsync(ct);
 
         var brasilia = TimeSpan.FromHours(-3); // sem horário de verão desde 2019
@@ -134,6 +140,12 @@ public class OrderService : IOrderService
             .GroupBy(r => DateOnly.FromDateTime(r.CreatedAt + brasilia))
             .Select(g => new DailySales(g.Key, g.Sum(r => r.Qty), g.Sum(r => r.Total)))
             .OrderBy(d => d.Day)
+            .ToList();
+
+        var byShift = paidRows
+            .GroupBy(r => r.Shift)
+            .Select(g => new ShiftSales(g.Key, g.Sum(r => r.Qty), g.Sum(r => r.Total)))
+            .OrderBy(s => s.Shift)
             .ToList();
 
         return new OrderStatsResponse
@@ -144,6 +156,7 @@ public class OrderService : IOrderService
             TicketsRedeemed = ticketsRedeemed,
             TicketsGenerated = ticketsToRedeem + ticketsRedeemed,
             ByDay = byDay,
+            ByShift = byShift,
         };
     }
 

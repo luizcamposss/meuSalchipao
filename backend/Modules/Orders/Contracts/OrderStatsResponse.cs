@@ -1,3 +1,5 @@
+using backend.Modules.Auth.Domain;
+
 namespace backend.Modules.Orders.Contracts;
 
 /// <summary>
@@ -24,6 +26,9 @@ public record OrderStatsResponse
 
     /// <summary>Vendas por dia (horário de Brasília), em ordem crescente de data.</summary>
     public IReadOnlyList<DailySales> ByDay { get; init; } = [];
+
+    /// <summary>Vendas por turno do comprador (o <c>Shift</c> cadastrado no perfil).</summary>
+    public IReadOnlyList<ShiftSales> ByShift { get; init; } = [];
 }
 
 /// <summary>Uma barra do gráfico "salchipões por dia".</summary>
@@ -31,3 +36,9 @@ public record OrderStatsResponse
 /// <param name="Salchipos">Salchipões vendidos nesse dia.</param>
 /// <param name="Revenue">Total em reais nesse dia.</param>
 public record DailySales(DateOnly Day, int Salchipos, decimal Revenue);
+
+/// <summary>Uma barra do gráfico "salchipões por turno".</summary>
+/// <param name="Shift">Turno cadastrado no perfil de quem comprou.</param>
+/// <param name="Salchipos">Salchipões vendidos pra compradores desse turno.</param>
+/// <param name="Revenue">Total em reais desse turno.</param>
+public record ShiftSales(Shift Shift, int Salchipos, decimal Revenue);
