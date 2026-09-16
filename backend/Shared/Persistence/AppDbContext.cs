@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<Product> Products { get; set; }
     public DbSet<EventSettings> Events { get; set; }
+    public DbSet<SaleWindow> SaleWindows => Set<SaleWindow>();
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Payment> Payments { get; set; }

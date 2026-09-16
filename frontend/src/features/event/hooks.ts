@@ -31,6 +31,57 @@ export function useUpdateEvent() {
   })
 }
 
+/**
+ * Mesma chave de `useEvent`, mas com polling mais rápido — usada no painel
+ * Staff pra acompanhar as vagas das janelas quase em tempo real. Como é a
+ * mesma queryKey, o TanStack usa o intervalo mais curto enquanto essa tela
+ * estiver montada, sem duplicar requisição.
+ */
+export function useEventLive() {
+  return useQuery({
+    queryKey: eventKeys.snapshot,
+    queryFn: ({ signal }) => eventApi.get(signal),
+    refetchInterval: 5_000,
+    staleTime: 2_000,
+  })
+}
+
+export function useCreateSaleWindow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: eventApi.createSaleWindow,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: eventKeys.snapshot })
+    },
+  })
+}
+
+export function useUpdateSaleWindow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string
+      body: Parameters<typeof eventApi.updateSaleWindow>[1]
+    }) => eventApi.updateSaleWindow(id, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: eventKeys.snapshot })
+    },
+  })
+}
+
+export function useDeleteSaleWindow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: eventApi.deleteSaleWindow,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: eventKeys.snapshot })
+    },
+  })
+}
+
 export type PhaseMode = 'before' | 'selling' | 'redeeming' | 'closed'
 
 const MODE_BY_PHASE: Record<EventPhaseSnapshot['phase'], PhaseMode> = {

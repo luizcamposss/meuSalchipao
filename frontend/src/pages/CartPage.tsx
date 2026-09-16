@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSalchipao } from '@/features/catalog/hooks'
+import { SaleWindowBadge } from '@/features/event/components/SaleWindowBadge'
 import { usePhase } from '@/features/event/hooks'
 import { useCreateOrder } from '@/features/orders/hooks'
 import { ApiError } from '@/lib/api'
@@ -36,7 +37,8 @@ export function CartPage() {
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
 
-  const selling = phase?.mode === 'selling'
+  const activeWindow = phase?.snapshot.saleWindows.find((w) => w.open) ?? null
+  const selling = phase?.mode === 'selling' || !!activeWindow
   const atMax = qty >= MAX_QTY
 
   const ctaLabel = selling
@@ -67,7 +69,8 @@ export function CartPage() {
     <div className="grid gap-4">
       <Logo className="mx-auto w-44" />
 
-      <div className="rounded-3xl bg-card p-5 shadow-sm">
+      <div className="relative rounded-3xl bg-card p-5 shadow-sm">
+        {activeWindow ? <SaleWindowBadge window={activeWindow} /> : null}
         {isError ? (
           <div className="grid gap-3 py-6 text-center">
             <p className="text-sm text-muted-foreground">

@@ -31,4 +31,26 @@ public class EventController : ControllerBase
         var staffId = Guid.Parse(User.FindFirstValue("sub")!);
         return Ok(await _eventService.UpdateAsync(request, staffId, ct));
     }
+
+    [HttpPost("sale-windows")]
+    [Authorize(Roles = "Staff")]
+    public async Task<ActionResult<SaleWindowResponse>> CreateSaleWindow(CreateSaleWindowRequest request, CancellationToken ct)
+    {
+        return Ok(await _eventService.CreateSaleWindowAsync(request, ct));
+    }
+
+    [HttpPut("sale-windows/{id:guid}")]
+    [Authorize(Roles = "Staff")]
+    public async Task<ActionResult<SaleWindowResponse>> UpdateSaleWindow(Guid id, UpdateSaleWindowRequest request, CancellationToken ct)
+    {
+        return Ok(await _eventService.UpdateSaleWindowAsync(id, request, ct));
+    }
+
+    [HttpDelete("sale-windows/{id:guid}")]
+    [Authorize(Roles = "Staff")]
+    public async Task<IActionResult> DeleteSaleWindow(Guid id, CancellationToken ct)
+    {
+        await _eventService.DeleteSaleWindowAsync(id, ct);
+        return NoContent();
+    }
 }
