@@ -1,8 +1,13 @@
 import * as React from 'react'
 
+import { shiftOptions } from '@/features/auth/schemas'
 import { money } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { DailySales } from '@/types/api'
+import type { DailySales, Shift, ShiftSales } from '@/types/api'
+
+function shiftLabel(shift: Shift): string {
+  return shiftOptions.find((o) => o.value === shift)?.label ?? shift
+}
 
 /** "2026-09-08" -> "08/09" sem passar por Date (evita deslocamento de fuso). */
 function dayLabel(iso: string): string {
@@ -117,6 +122,111 @@ export function SalesBarChart({ data }: { data: DailySales[] }) {
               )}
             >
               {dayLabel(r.day)}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---- gráfico: salchipões por turno --------------------------------
+
+const SHIFT_ORDER: Shift[] = ['Morning', 'Afternoon', 'Evening']
+
+export function ShiftBarChart({ data }: { data: ShiftSales[] }) {
+  const [hover, setHover] = React.useState<number | null>(null)
+
+  const byShift = new Map(data.map((s) => [s.shift, s]))
+  const rows: ShiftSales[] = SHIFT_ORDER.map(
+    (shift) => byShift.get(shift) ?? { shift, salchipos: 0, revenue: 0 },
+  )
+
+  const peak = Math.max(...rows.map((r) => r.salchipos))
+
+  if (peak === 0) {
+    return (
+      <div className="grid h-48 place-items-center rounded-xl bg-secondary/30 text-sm text-muted-foreground">
+        Nenhuma venda ainda.
+      </div>
+    )
+  }
+
+  const top = niceCeil(peak)
+  const maxIdx = rows.findIndex((r) => r.salchipos === peak)
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-3">
+        <div className="flex w-6 shrink-0 flex-col justify-between py-0.5 text-right text-[0.625rem] tabular-nums text-muted-foreground">
+          <span>{top}</span>
+          <span>0</span>
+        </div>
+
+        <div className="relative min-w-0 flex-1">
+          <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+            <div className="border-t border-border/45" />
+            <div className="border-t border-border/25" />
+            <div className="border-t border-border" />
+          </div>
+
+          <div className="relative flex h-44 items-end gap-3">
+            {rows.map((r, i) => {
+              const h = top === 0 ? 0 : (r.salchipos / top) * 100
+              const active = hover === i
+              return (
+                <div
+                  key={r.shift}
+                  tabIndex={0}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover((c) => (c === i ? null : c))}
+                  onFocusCapture={() => setHover(i)}
+                  onBlur={() => setHover((c) => (c === i ? null : c))}
+                  className="group relative flex h-full flex-1 flex-col justify-end outline-none"
+                >
+                  {(i === maxIdx || active) && r.salchipos > 0 ? (
+                    <span className="mx-auto mb-1 text-[0.625rem] font-semibold tabular-nums text-foreground">
+                      {r.salchipos}
+                    </span>
+                  ) : null}
+
+                  <div
+                    className={cn(
+                      'w-full rounded-t-[4px] bg-chart-sales transition-all duration-500 ease-out',
+                      active ? 'brightness-110' : 'group-hover:brightness-110',
+                    )}
+                    style={{ height: `${h}%`, minHeight: r.salchipos > 0 ? 3 : 0 }}
+                  />
+
+                  {active ? (
+                    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-[0.6875rem] leading-tight text-background shadow-lg">
+                      <span className="font-semibold">{shiftLabel(r.shift)}</span>
+                      {' · '}
+                      {r.salchipos} salchipã{r.salchipos === 1 ? 'o' : 'es'}
+                      <span className="text-background/70"> · {money(r.revenue)}</span>
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <div className="w-6 shrink-0" />
+        <div className="flex min-w-0 flex-1 gap-3">
+          {rows.map((r, i) => (
+            <span
+              key={r.shift}
+              className={cn(
+                'flex-1 text-center text-[0.625rem] tabular-nums',
+                hover === i
+                  ? 'font-semibold text-foreground'
+                  : 'text-muted-foreground',
+              )}
+            >
+              {shiftLabel(r.shift)}
             </span>
           ))}
         </div>

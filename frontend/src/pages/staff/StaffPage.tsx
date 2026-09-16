@@ -39,7 +39,7 @@ import type {
   SaleWindowResponse,
 } from '@/types/api'
 
-import { RedeemMeter, SalesBarChart } from './SummaryCharts'
+import { RedeemMeter, SalesBarChart, ShiftBarChart } from './SummaryCharts'
 import { TicketDetail } from './TicketDetail'
 
 const FILTERS: { label: string; value?: SacTicketStatus }[] = [
@@ -243,6 +243,15 @@ function SummaryDashboard() {
             redeemed={stats.ticketsRedeemed}
             pending={stats.ticketsToRedeem}
           />
+        </SectionCard>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <SectionCard
+          title="Salchipões por turno"
+          subtitle="unidades vendidas por turno de quem comprou"
+        >
+          <ShiftBarChart data={stats.byShift} />
         </SectionCard>
       </div>
     </div>
