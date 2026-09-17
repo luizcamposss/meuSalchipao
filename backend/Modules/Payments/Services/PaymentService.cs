@@ -161,31 +161,31 @@ public class PaymentService : IPaymentService
 
             var order = await _context.Orders.FirstAsync(o => o.Id == payment.OrderId, ct);
 
-            if (order.Status == OrderStatus.AwaitingPayment)
+            if (newStatus == PaymentStatus.Approved
+                && order.Status is not (OrderStatus.Paid or OrderStatus.Redeemed))
             {
-                if (newStatus == PaymentStatus.Approved)
-                {
-                    order.PaymentStatus = PaymentStatus.Approved;
-                    order.Status = OrderStatus.Paid;
-                    order.UpdatedAt = now;
+                // Cobre tanto o caminho normal (pedido ainda AwaitingPayment) quanto
+                // a corrida com o SalesCutoffWorker: se o pedido já tinha sido
+                // cancelado (ex.: sweep por fechamento de janela) mas a Mercado Pago
+                // confirma o pagamento depois, o pedido tem que virar Paid mesmo
+                // assim — dinheiro aprovado nunca pode terminar em "Cancelado".
+                order.PaymentStatus = PaymentStatus.Approved;
+                order.Status = OrderStatus.Paid;
+                order.UpdatedAt = now;
 
-                    // Número curto de retirada, sequencial (best-effort — sem
-                    // constraint de unicidade; o webhook é serializado na prática).
-                    var lastPickup = await _context.Orders
-                        .Where(o => o.PickupNumber != null)
-                        .MaxAsync(o => (int?)o.PickupNumber, ct);
-                    order.PickupNumber = (lastPickup ?? 0) + 1;
-                }
-                else if (newStatus is PaymentStatus.Rejected or PaymentStatus.Expired)
-                {
-                    order.PaymentStatus = newStatus;
-                    order.Status = OrderStatus.Cancelled;
-                    order.UpdatedAt = now;
-                }
+                // Número curto de retirada, sequencial (best-effort — sem
+                // constraint de unicidade; o webhook é serializado na prática).
+                var lastPickup = await _context.Orders
+                    .Where(o => o.PickupNumber != null)
+                    .MaxAsync(o => (int?)o.PickupNumber, ct);
+                order.PickupNumber = (lastPickup ?? 0) + 1;
             }
-            else if (newStatus == PaymentStatus.Approved
-                     && order.Status is not (OrderStatus.Paid or OrderStatus.Redeemed))
+            else if (order.Status == OrderStatus.AwaitingPayment
+                     && newStatus is PaymentStatus.Rejected or PaymentStatus.Expired)
             {
+                order.PaymentStatus = newStatus;
+                order.Status = OrderStatus.Cancelled;
+                order.UpdatedAt = now;
             }
         }
 
