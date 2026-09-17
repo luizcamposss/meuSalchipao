@@ -60,6 +60,15 @@ public class AuthController(IAuthService authService, IHostEnvironment env) : Co
         }
     }
     
+    [EnableRateLimiting("auth")]
+    [HttpPost("staff/reset-password")]
+    [Authorize(Roles = "Staff")]
+    public async Task<ActionResult<StaffResetPasswordResponse>> StaffResetPassword(
+        StaffResetPasswordRequest request, CancellationToken ct)
+    {
+        return Ok(await authService.ResetPasswordAsync(request, ct));
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {

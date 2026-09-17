@@ -13,4 +13,6 @@ public interface IAuthService
     Task LogoutAsync(string refreshToken, CancellationToken ct);
 
     Task<MeResponse?> GetMeAsync(Guid userId, CancellationToken ct);
+
+    Task<StaffResetPasswordResponse> ResetPasswordAsync(StaffResetPasswordRequest request, CancellationToken ct);
 }

@@ -78,6 +78,18 @@ export interface Me {
   role: Role
 }
 
+export interface StaffResetPasswordRequest {
+  email: string
+  newPassword: string
+}
+
+export interface StaffResetPasswordResponse {
+  id: string
+  name: string
+  email: string
+  enrollment: string
+}
+
 // ---- catalog ---------------------------------------------------------
 
 export interface Product {

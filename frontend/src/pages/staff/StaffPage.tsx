@@ -11,6 +11,7 @@ import * as React from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useStaffResetPassword } from '@/features/auth/hooks'
 import {
   useCreateSaleWindow,
   useDeleteSaleWindow,
@@ -37,6 +38,7 @@ import type {
   SacTicketResponse,
   SacTicketStatus,
   SaleWindowResponse,
+  StaffResetPasswordResponse,
 } from '@/types/api'
 
 import { RedeemMeter, SalesBarChart, ShiftBarChart } from './SummaryCharts'
@@ -886,6 +888,117 @@ function SaleWindowsPanel() {
   )
 }
 
+// ---- contas (reset de senha) ---------------------------------------
+
+function randomPassword() {
+  const bytes = crypto.getRandomValues(new Uint8Array(6))
+  return Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 10)
+}
+
+function ResetPasswordForm() {
+  const reset = useStaffResetPassword()
+  const [email, setEmail] = React.useState('')
+  const [newPassword, setNewPassword] = React.useState('')
+  const [error, setError] = React.useState<string | null>(null)
+  const [result, setResult] = React.useState<StaffResetPasswordResponse | null>(null)
+
+  const field =
+    'h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setResult(null)
+    if (!email.trim() || newPassword.length < 8) {
+      setError('Informe o e-mail e uma senha nova com pelo menos 8 caracteres.')
+      return
+    }
+    try {
+      const res = await reset.mutateAsync({ email: email.trim(), newPassword })
+      setResult(res)
+      setEmail('')
+      setNewPassword('')
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : 'Não foi possível redefinir a senha.',
+      )
+    }
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="flex max-w-md flex-col gap-4 rounded-3xl bg-card p-5 shadow-sm"
+    >
+      <div>
+        <h3 className="text-sm font-bold text-foreground">
+          Redefinir senha de aluno
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Busca pelo e-mail cadastrado e define uma senha nova na hora. As
+          sessões abertas dessa conta são encerradas.
+        </p>
+      </div>
+
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          E-mail do aluno
+        </span>
+        <input
+          type="email"
+          className={field}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="aluno@escola.com"
+        />
+      </label>
+
+      <label className="grid gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Senha nova
+        </span>
+        <div className="flex gap-2">
+          <input
+            className={field}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="mín. 8 caracteres"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 shrink-0 rounded-xl border-[1.5px] px-3 text-xs"
+            onClick={() => setNewPassword(randomPassword())}
+          >
+            Gerar
+          </Button>
+        </div>
+      </label>
+
+      {error ? (
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+          {error}
+        </p>
+      ) : null}
+
+      {result ? (
+        <p className="rounded-lg bg-flag-green/15 px-3 py-2 text-sm font-medium text-flag-green">
+          Senha redefinida para {result.name} (matrícula {result.enrollment}).
+          Passe a senha nova pra ele(a).
+        </p>
+      ) : null}
+
+      <Button
+        type="submit"
+        className="h-11 w-full rounded-xl font-semibold"
+        disabled={reset.isPending}
+      >
+        {reset.isPending ? 'Redefinindo…' : 'Redefinir senha'}
+      </Button>
+    </form>
+  )
+}
+
 // ---- página ------------------------------------------------------
 
 const TABS = [
@@ -893,6 +1006,7 @@ const TABS = [
   { value: 'sac', label: 'Atendimento' },
   { value: 'event', label: 'Evento' },
   { value: 'walkup', label: 'Venda do dia' },
+  { value: 'accounts', label: 'Contas' },
 ] as const
 
 type StaffTab = (typeof TABS)[number]['value']
@@ -928,8 +1042,10 @@ export function StaffPage() {
         <div className="max-w-lg">
           <EventControl />
         </div>
-      ) : (
+      ) : tab === 'walkup' ? (
         <SaleWindowsPanel />
+      ) : (
+        <ResetPasswordForm />
       )}
     </div>
   )

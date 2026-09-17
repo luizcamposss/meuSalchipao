@@ -167,6 +167,29 @@ public class AuthService : IAuthService
             : new MeResponse(user.Id, user.Name, user.Email, user.Enrollment, user.Shift, user.Role);
     }
 
+    public async Task<StaffResetPasswordResponse> ResetPasswordAsync(StaffResetPasswordRequest request, CancellationToken ct)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == request.Email, ct);
+
+        if (user is null)
+            throw new NotFoundException("No user found with this email.");
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // Derruba as sessões existentes: a senha antiga não deve continuar
+        // valendo pra sessões já abertas depois de um reset feito pelo staff.
+        var sessions = await _context.Sessions
+            .Where(s => s.UserId == user.Id)
+            .ToListAsync(ct);
+        _context.Sessions.RemoveRange(sessions);
+
+        await _context.SaveChangesAsync(ct);
+
+        return new StaffResetPasswordResponse(user.Id, user.Name, user.Email, user.Enrollment);
+    }
+
     private static string GenerateRefreshToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);

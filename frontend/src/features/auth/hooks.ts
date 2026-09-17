@@ -36,6 +36,12 @@ export function useRegister() {
   })
 }
 
+export function useStaffResetPassword() {
+  return useMutation({
+    mutationFn: authApi.staffResetPassword,
+  })
+}
+
 export function useLogout() {
   const qc = useQueryClient()
   return useMutation({

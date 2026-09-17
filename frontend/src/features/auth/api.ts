@@ -5,6 +5,8 @@ import type {
   Me,
   RegisterRequest,
   RegisterResponse,
+  StaffResetPasswordRequest,
+  StaffResetPasswordResponse,
 } from '@/types/api'
 
 export const authApi = {
@@ -20,4 +22,8 @@ export const authApi = {
 
   logout: () =>
     api.post<void>('/auth/logout', undefined, { skipAuthRefresh: true }),
+
+  /** Staff redefine a senha de um aluno pelo e-mail. */
+  staffResetPassword: (body: StaffResetPasswordRequest) =>
+    api.post<StaffResetPasswordResponse>('/auth/staff/reset-password', body),
 }
