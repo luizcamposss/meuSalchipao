@@ -61,7 +61,15 @@ public class PaymentService : IPaymentService
                 throw new ConflictException("Sales are closed.");
 
             var ttlExpiry = now.AddMinutes(PixTtlMinutes);
-            var cutoff = new DateTimeOffset(phase.SalesCloseAt, TimeSpan.Zero);
+
+            // O corte não pode olhar só pro fechamento "regular" (SalesCloseAt):
+            // numa venda avulsa do dia (walk-up sale window) essa data já passou,
+            // então o corte tem que respeitar até quando a janela aberta permite
+            // vender — senão o pedido nasce com prazo de pagamento no passado e a
+            // Mercado Pago rejeita a criação do Pix (date_of_expiration no passado).
+            var cutoffCandidates = new List<DateTime> { phase.SalesCloseAt };
+            cutoffCandidates.AddRange(phase.SaleWindows.Where(w => w.Open).Select(w => w.ClosesAt));
+            var cutoff = new DateTimeOffset(cutoffCandidates.Max(), TimeSpan.Zero);
             var expiresAt = ttlExpiry < cutoff ? ttlExpiry : cutoff;
 
             payment = new Payment
