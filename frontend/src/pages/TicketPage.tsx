@@ -2,8 +2,16 @@ import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { Logo } from '@/components/Logo'
-import { SlideToConfirm } from '@/components/SlideToConfirm'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePhase } from '@/features/event/hooks'
 import { useRedeem, useTicket } from '@/features/orders/hooks'
@@ -18,6 +26,7 @@ export function TicketPage() {
   const redeem = useRedeem(orderId)
 
   const [redeemError, setRedeemError] = React.useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   const redeeming = phase?.mode === 'redeeming'
   const isRedeemed = ticket?.status === 'Redeemed'
@@ -27,6 +36,7 @@ export function TicketPage() {
     setRedeemError(null)
     try {
       await redeem.mutateAsync()
+      setConfirmOpen(false)
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setRedeemError(err.message || 'A retirada não está disponível.')
@@ -154,23 +164,55 @@ export function TicketPage() {
                   Mostre este código à equipe. Confirme somente quando estiver no
                   balcão.
                 </p>
-                {redeemError ? (
-                  <p className="mt-2 text-sm font-medium text-destructive">
-                    {redeemError}
-                  </p>
-                ) : null}
                 <div className="mt-3">
-                  <SlideToConfirm
-                    label={
-                      canRedeem
-                        ? 'Deslize para confirmar'
-                        : 'Retirada ainda não abriu'
-                    }
-                    onConfirm={handleConfirm}
+                  <Button
+                    className="h-14 w-full rounded-full text-[15px] font-bold"
                     disabled={!canRedeem}
-                    loading={redeem.isPending}
-                  />
+                    onClick={() => {
+                      setRedeemError(null)
+                      setConfirmOpen(true)
+                    }}
+                  >
+                    {canRedeem ? 'Confirmar retirada' : 'Retirada ainda não abriu'}
+                  </Button>
                 </div>
+
+                <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Confirmar retirada</DialogTitle>
+                      <DialogDescription>
+                        Só confirme estando no balcão, recebendo o pedido. Essa
+                        ação não pode ser desfeita.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {redeemError ? (
+                      <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+                        {redeemError}
+                      </p>
+                    ) : null}
+
+                    <DialogFooter>
+                      <Button
+                        className="h-11 w-full rounded-xl text-[15px] font-semibold"
+                        disabled={redeem.isPending}
+                        onClick={handleConfirm}
+                      >
+                        {redeem.isPending ? 'Confirmando…' : 'Confirmar retirada'}
+                      </Button>
+                      <DialogClose asChild>
+                        <Button
+                          variant="ghost"
+                          className="h-10 w-full rounded-xl text-muted-foreground hover:text-foreground"
+                          disabled={redeem.isPending}
+                        >
+                          Cancelar
+                        </Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </>
             )}
           </div>
