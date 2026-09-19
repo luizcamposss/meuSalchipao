@@ -174,6 +174,12 @@ export interface ShiftSales {
   revenue: number
 }
 
+export interface ShiftRedeemStatus {
+  shift: Shift
+  toRedeem: number
+  redeemed: number
+}
+
 export interface OrderStats {
   salchiposSold: number
   revenue: number
@@ -182,6 +188,7 @@ export interface OrderStats {
   ticketsGenerated: number
   byDay: DailySales[]
   byShift: ShiftSales[]
+  redeemByShift: ShiftRedeemStatus[]
 }
 
 export interface PaymentResponse {

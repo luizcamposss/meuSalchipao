@@ -41,7 +41,12 @@ import type {
   StaffResetPasswordResponse,
 } from '@/types/api'
 
-import { RedeemMeter, SalesBarChart, ShiftBarChart } from './SummaryCharts'
+import {
+  RedeemMeter,
+  SalesBarChart,
+  ShiftBarChart,
+  ShiftRedeemChart,
+} from './SummaryCharts'
 import { TicketDetail } from './TicketDetail'
 
 const FILTERS: { label: string; value?: SacTicketStatus }[] = [
@@ -153,6 +158,10 @@ function SummaryDashboard() {
           <Skeleton className="h-72 rounded-2xl lg:col-span-2" />
           <Skeleton className="h-72 rounded-2xl" />
         </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Skeleton className="h-64 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
       </div>
     )
   }
@@ -253,12 +262,18 @@ function SummaryDashboard() {
         </SectionCard>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-2">
         <SectionCard
           title="Salchipões por turno"
           subtitle="unidades vendidas por turno de quem comprou"
         >
           <ShiftBarChart data={stats.byShift} />
+        </SectionCard>
+        <SectionCard
+          title="A resgatar por turno"
+          subtitle="tickets pagos aguardando o balcão, por turno de quem comprou"
+        >
+          <ShiftRedeemChart data={stats.redeemByShift} />
         </SectionCard>
       </div>
     </div>

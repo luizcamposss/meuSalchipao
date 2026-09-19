@@ -125,6 +125,7 @@ public class OrderService : IOrderService
             .Join(_context.Users.AsNoTracking(), o => o.UserId, u => u.Id, (o, u) => new
             {
                 o.CreatedAt,
+                o.Status,
                 Qty = o.Items.Sum(i => i.Quantity),
                 o.Total,
                 u.Shift,
@@ -144,6 +145,15 @@ public class OrderService : IOrderService
             .OrderBy(s => s.Shift)
             .ToList();
 
+        var redeemByShift = paidRows
+            .GroupBy(r => r.Shift)
+            .Select(g => new ShiftRedeemStatus(
+                g.Key,
+                g.Count(r => r.Status == OrderStatus.Paid),
+                g.Count(r => r.Status == OrderStatus.Redeemed)))
+            .OrderBy(s => s.Shift)
+            .ToList();
+
         return new OrderStatsResponse
         {
             SalchiposSold = salchiposSold,
@@ -153,6 +163,7 @@ public class OrderService : IOrderService
             TicketsGenerated = ticketsToRedeem + ticketsRedeemed,
             ByDay = byDay,
             ByShift = byShift,
+            RedeemByShift = redeemByShift,
         };
     }
 

@@ -11,8 +11,11 @@ public record OrderStatsResponse
     public int TicketsGenerated { get; init; }
     public IReadOnlyList<DailySales> ByDay { get; init; } = [];
     public IReadOnlyList<ShiftSales> ByShift { get; init; } = [];
+    public IReadOnlyList<ShiftRedeemStatus> RedeemByShift { get; init; } = [];
 }
 
 public record DailySales(DateOnly Day, int Salchipos, decimal Revenue);
 
 public record ShiftSales(Shift Shift, int Salchipos, decimal Revenue);
+
+public record ShiftRedeemStatus(Shift Shift, int ToRedeem, int Redeemed);

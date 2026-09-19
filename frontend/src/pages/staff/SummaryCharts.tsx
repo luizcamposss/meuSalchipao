@@ -3,7 +3,7 @@ import * as React from 'react'
 import { shiftOptions } from '@/features/auth/schemas'
 import { money } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { DailySales, Shift, ShiftSales } from '@/types/api'
+import type { DailySales, Shift, ShiftRedeemStatus, ShiftSales } from '@/types/api'
 
 function shiftLabel(shift: Shift): string {
   return shiftOptions.find((o) => o.value === shift)?.label ?? shift
@@ -192,6 +192,107 @@ export function ShiftBarChart({ data }: { data: ShiftSales[] }) {
                       {' · '}
                       {r.salchipos} salchipã{r.salchipos === 1 ? 'o' : 'es'}
                       <span className="text-background/70"> · {money(r.revenue)}</span>
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <div className="w-6 shrink-0" />
+        <div className="flex min-w-0 flex-1 gap-3">
+          {rows.map((r, i) => (
+            <span
+              key={r.shift}
+              className={cn(
+                'flex-1 text-center text-[0.625rem] tabular-nums',
+                hover === i
+                  ? 'font-semibold text-foreground'
+                  : 'text-muted-foreground',
+              )}
+            >
+              {shiftLabel(r.shift)}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function ShiftRedeemChart({ data }: { data: ShiftRedeemStatus[] }) {
+  const [hover, setHover] = React.useState<number | null>(null)
+
+  const byShift = new Map(data.map((s) => [s.shift, s]))
+  const rows: ShiftRedeemStatus[] = SHIFT_ORDER.map(
+    (shift) => byShift.get(shift) ?? { shift, toRedeem: 0, redeemed: 0 },
+  )
+
+  const peak = Math.max(...rows.map((r) => r.toRedeem))
+
+  if (peak === 0) {
+    return (
+      <div className="grid h-48 place-items-center rounded-xl bg-secondary/30 text-sm text-muted-foreground">
+        Nenhum ticket a resgatar.
+      </div>
+    )
+  }
+
+  const top = niceCeil(peak)
+  const maxIdx = rows.findIndex((r) => r.toRedeem === peak)
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-3">
+        <div className="flex w-6 shrink-0 flex-col justify-between py-0.5 text-right text-[0.625rem] tabular-nums text-muted-foreground">
+          <span>{top}</span>
+          <span>0</span>
+        </div>
+
+        <div className="relative min-w-0 flex-1">
+          <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+            <div className="border-t border-border/45" />
+            <div className="border-t border-border/25" />
+            <div className="border-t border-border" />
+          </div>
+
+          <div className="relative flex h-44 items-end gap-3">
+            {rows.map((r, i) => {
+              const h = top === 0 ? 0 : (r.toRedeem / top) * 100
+              const active = hover === i
+              return (
+                <div
+                  key={r.shift}
+                  tabIndex={0}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover((c) => (c === i ? null : c))}
+                  onFocusCapture={() => setHover(i)}
+                  onBlur={() => setHover((c) => (c === i ? null : c))}
+                  className="group relative flex h-full flex-1 flex-col justify-end outline-none"
+                >
+                  {(i === maxIdx || active) && r.toRedeem > 0 ? (
+                    <span className="mx-auto mb-1 text-[0.625rem] font-semibold tabular-nums text-foreground">
+                      {r.toRedeem}
+                    </span>
+                  ) : null}
+
+                  <div
+                    className={cn(
+                      'w-full rounded-t-[4px] bg-chart-pending transition-all duration-500 ease-out',
+                      active ? 'brightness-110' : 'group-hover:brightness-110',
+                    )}
+                    style={{ height: `${h}%`, minHeight: r.toRedeem > 0 ? 3 : 0 }}
+                  />
+
+                  {active ? (
+                    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-[0.6875rem] leading-tight text-background shadow-lg">
+                      <span className="font-semibold">{shiftLabel(r.shift)}</span>
+                      {' · '}
+                      {r.toRedeem} a resgatar
+                      <span className="text-background/70"> · {r.redeemed} já resgatados</span>
                     </div>
                   ) : null}
                 </div>
