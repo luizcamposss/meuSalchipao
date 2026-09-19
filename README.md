@@ -3,9 +3,10 @@
 # 🌭 Meu Salchipão
 
 **Venda digital do lanche da Semana Farroupilha.**
-O aluno ou funcionário se cadastra, faz o pedido, **paga por Pix via Mercado Pago dentro do app**
-e recebe um **ticket digital** — resgatado no balcão com um deslizar de dedo.
+O aluno ou colaborador se cadastra, faz o pedido, **paga por Pix via Mercado Pago dentro do app**
+e recebe um **ticket digital** — resgatado no balcão com um toque de confirmação.
 
+[![CI](https://github.com/luizcamposss/meuSalchipao/actions/workflows/ci.yml/badge.svg)](https://github.com/luizcamposss/meuSalchipao/actions/workflows/ci.yml)
 ![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -24,24 +25,24 @@ e recebe um **ticket digital** — resgatado no balcão com um deslizar de dedo.
 - [Stack](#stack)
 - [Arquitetura](#arquitetura)
 - [Ciclo de vida do evento](#ciclo-de-vida-do-evento)
+- [Venda avulsa do dia](#venda-avulsa-do-dia)
 - [Autenticação](#autenticação)
 - [Pagamento Pix + Webhook](#pagamento-pix--webhook)
 - [Referência da API](#referência-da-api)
 - [Modelo de domínio](#modelo-de-domínio)
 - [Rodando localmente](#rodando-localmente)
-- [Deploy](#deploy)
+- [Deploy e CI/CD](#deploy-e-cicd)
 - [Configuração (`.env`)](#configuração-env)
 - [Estrutura do repositório](#estrutura-do-repositório)
 - [Decisões e tradeoffs](#decisões-e-tradeoffs)
-- [Lacunas conhecidas](#lacunas-conhecidas)
 
 ---
 
 ## O que é
 
-Sistema interno para a **Semana Farroupilha** (evento escolar, RS). Digitaliza a compra do
+Sistema interno para a **Semana Farroupilha do SENAI/RS**. Digitaliza a compra do
 "Salchipão": tira a fila do dinheiro, o troco e o vale-papel — o aluno paga pelo celular e
-retira mostrando um código.
+retira mostrando seu ticket.
 
 O evento roda em **fases**. Há uma janela de venda; depois de uma data de corte as vendas
 fecham e passa a valer só o resgate. **A API expõe a fase atual** — frontend e regras de
@@ -63,39 +64,60 @@ painel.
 
 - **Cadastro / login** com sessão em cookie `HttpOnly` (nenhum token no JavaScript).
 - **Home dirigida pela fase** — antes da venda mostra contagem regressiva; na venda, o CTA de
-  compra; na retirada, o atalho pro ticket; fechado, o aviso.
+  compra; na retirada, o atalho pro ticket; fechado, o aviso. Se uma **janela de venda avulsa**
+  estiver aberta, um card de destaque aparece independente da fase, com o horário
+  e as unidades restantes.
 - **Montar o pedido** — 1 a 4 salchipões, total calculado no servidor, diálogo de confirmação.
 - **Pagamento Pix** — QR + copia-e-cola, contagem até expirar, a tela **atualiza sozinha**
   quando o pagamento cai (polling do status).
-- **Ticket digital** — código de retirada curto (`032`), QR, e um **"deslize para confirmar"**
-  que o operador arrasta no celular do aluno para dar baixa (transição atômica, à prova de
-  dois scans).
+- **Ticket digital** — código de retirada curto (`032`), QR, e um botão de **confirmação com
+  diálogo de aviso** que o próprio aluno toca no balcão pra dar baixa (transição atômica, à
+  prova de dois scans).
 - **Meus pedidos** — lista com status contextual.
-- **Atendimento (SAC)** — chat único com a equipe, com respostas rápidas.
+- **Atendimento (SAC)** — chat único com a equipe.
 - **Perfil** — dados do cadastro.
 
 ### Painel da equipe (Staff)
 
-- **Layout de desktop** — barra de topo, master-detail.
-- **Fila do SAC** — filtro por status, prioridade (Alta em destaque), e o **detalhe do chamado
-  lado a lado**: dados do aluno (nome, e-mail, matrícula, pedido), thread, resposta, e controle
-  de status/prioridade.
-- **Controle do evento** — editar as três datas (abertura/fechamento de vendas, abertura da
-  retirada) em **horário de Brasília** e forçar uma fase (`Auto / SalesOnly / RedemptionOnly /
-  Closed`).
+Layout de desktop, 5 abas:
 
-Um usuário `Staff` é **semeado na primeira subida** do backend — credenciais em
-[`backend/Program.cs`](backend/Program.cs). Novos cadastros entram sempre como aluno.
+- **Resumo** — dashboard ao vivo (atualiza sozinho): salchipões vendidos, faturamento, tickets
+  a resgatar/resgatados, e 4 gráficos (por dia, resgate no balcão, vendas por turno, a resgatar
+  por turno — turno é o cadastrado no perfil de quem comprou).
+- **Atendimento** — fila do SAC com filtro por status, prioridade (Alta em destaque), e o
+  **detalhe do chamado lado a lado**: dados do aluno (nome, e-mail, matrícula, pedido), thread,
+  resposta, e controle de status/prioridade.
+- **Evento** — editar as três datas (abertura/fechamento de vendas, abertura da retirada) em
+  **horário de Brasília** e forçar uma fase (`Auto / SalesOnly / RedemptionOnly / Closed`).
+- **Venda do dia** — cadastra **janelas de venda avulsa** (nome, início, fim, cota) pro dia de
+  retirada, com contador de vagas ao vivo. Ver [Venda avulsa](#venda-avulsa-do-dia) abaixo.
+- **Contas** — redefine a senha de um aluno pelo e-mail (não há "esqueci minha senha"
+  self-service; passa pela equipe).
 
 ---
 
 ## Telas
 
-> _Prints em `docs/screenshots/` (adicionar)._
+Prints reais do ambiente de produção, em `docs/screenshots/`.
 
-| Aluno | Staff |
-|---|---|
-| Login · Home · Pedido · Pix · Ticket · SAC | Fila do SAC · Detalhe do chamado · Controle do evento |
+### Aluno
+
+| Home | Carrinho | Pedidos |
+|---|---|---|
+| ![Home](docs/screenshots/aluno-home.jpg) | ![Carrinho](docs/screenshots/aluno-carrinho.jpg) | ![Pedidos](docs/screenshots/aluno-pedidos.jpg) |
+
+| Ticket | Perfil | SAC |
+|---|---|---|
+| ![Ticket](docs/screenshots/aluno-ticket.jpg) | ![Perfil](docs/screenshots/aluno-perfil.jpg) | ![SAC](docs/screenshots/aluno-sac.jpg) |
+
+### Staff
+
+| Resumo | Evento | Venda do dia | Contas |
+|---|---|---|---|
+| ![Resumo](docs/screenshots/staff-resumo.jpg) | ![Evento](docs/screenshots/staff-evento.jpg) | ![Venda do dia](docs/screenshots/staff-venda-do-dia.jpg) | ![Contas](docs/screenshots/staff-contas.jpg) |
+
+> A aba **Atendimento** (SAC) não tem print aqui: a UI mestre-detalhe sempre abre um chamado ao
+> carregar, e todo chamado real em produção expõe dados de um aluno (nome, e-mail, matrícula).
 
 ---
 
@@ -208,6 +230,25 @@ servidor**, não o do cliente. As datas do evento são renderizadas fixas em `Am
 
 ---
 
+## Venda avulsa do dia
+
+No dia da retirada a equipe pode reabrir a venda por um tempo curto — pra quem chega sem ter
+comprado antes — sem tirar o sistema da fase `RedemptionOnly` e **sem redeploy**.
+
+- **`SaleWindow`** — não são "manhã/tarde" fixos no código: é uma **lista** (`sale_windows`,
+  1-N com `event_settings`). O Staff cadastra quantas janelas quiser pela aba **Venda do dia**
+  (nome livre, início, fim, cota).
+- **`SalesOpen` volta a `true`** enquanto qualquer janela está com `agora` dentro do intervalo
+  e vagas sobrando — mas só quando `forcedPhase == Auto` (um "fechado" forçado pelo Staff
+  sempre vence). O campo `phase` **não muda** — continua `RedemptionOnly`, pra não confundir o
+  front (que já reage a `phase`, não só a `salesOpen`).
+- **Cota travada por incremento atômico** (`UPDATE ... WHERE Count < Cap`, mesma ideia do
+  `redeem`) — testado sob concorrência real, sem overselling.
+- `GET /event` devolve `saleWindows: [{ id, label, open, opensAt, closesAt, cap, remaining }]`.
+  `POST /orders` reserva a vaga **depois** de validar o pedido, só se uma janela estiver aberta.
+
+---
+
 ## Autenticação
 
 **Dois tokens, papéis diferentes:**
@@ -236,14 +277,15 @@ Sem token antiforgery — decisão deliberada para o escopo.
 | `auth` | 10 req / min por IP | `POST /auth/register`, `POST /auth/login` |
 | `payment` | 5 req / min por usuário | `POST /orders/{id}/payment` |
 
-> Atrás do Caddy, configure `UseForwardedHeaders` para o rate-limit por IP ver o cliente real.
+> Atrás do Caddy, `UseForwardedHeaders` já está configurado (`Program.cs`) pro rate-limit por
+> IP ver o cliente real, não o IP interno do proxy.
 
 ---
 
 ## Pagamento Pix + Webhook
 
 Integração **direta** com o Mercado Pago (Checkout Transparente / Pix), sem o SDK. Duas
-chamadas: `POST /v1/payments` e `GET /v1/payments/{id}`. **Sem estorno** ("pagou não volta").
+chamadas: `POST /v1/payments` e `GET /v1/payments/{id}`. **Sem estorno** ("pagou não volta, regra decidida no escopo").
 
 ### Criar a cobrança — `POST /orders/{id}/payment`
 
@@ -296,6 +338,7 @@ Auth = cookie `access_token`. **Aluno** = qualquer logado; **Staff** = `Role = S
 | POST | `/auth/refresh` | cookie `refresh_token` | — | `200` + cookies novos · `401` (limpa cookies) |
 | POST | `/auth/logout` | — | — | `204` |
 | GET | `/auth/me` | aluno | — | `200` `{ id, name, email, enrollment, shift, role }` · `401` |
+| POST | `/auth/staff/reset-password` | **Staff** (rate `auth`) | `{ email, newPassword }` | `200` `{ id, name, email, enrollment }` · `404` |
 
 ### `/products`
 
@@ -308,8 +351,14 @@ Auth = cookie `access_token`. **Aluno** = qualquer logado; **Staff** = `Role = S
 
 | Método | Rota | Auth | Corpo | Respostas |
 |---|---|---|---|---|
-| GET | `/event` | público | — | `200` `{ salesOpen, redemptionOpen, phase, forcedPhase, salesOpenAt, salesCloseAt, redemptionOpensAt, serverTime }` |
+| GET | `/event` | público | — | `200` `{ salesOpen, redemptionOpen, phase, forcedPhase, salesOpenAt, salesCloseAt, redemptionOpensAt, serverTime, saleWindows }` |
 | PUT | `/event` | **Staff** | `{ salesOpenAt, salesCloseAt, redemptionOpensAt, forcedPhase }` | `200` snapshot · `400` (`SalesOpenAt >= SalesCloseAt`) · `403` |
+| POST | `/event/sale-windows` | **Staff** | `{ label, opensAt, closesAt, cap }` | `200` `{ id, label, open, opensAt, closesAt, cap, remaining }` · `400` |
+| PUT | `/event/sale-windows/{id}` | **Staff** | idem | `200` idem · `400` · `404` |
+| DELETE | `/event/sale-windows/{id}` | **Staff** | — | `204` · `404` |
+
+`saleWindows` é a lista completa (aberta ou não); `remaining` já vem calculado
+(`max(0, cap - vendidos)`). Ver [Venda avulsa do dia](#venda-avulsa-do-dia).
 
 </details>
 
@@ -326,8 +375,8 @@ Auth = cookie `access_token`. **Aluno** = qualquer logado; **Staff** = `Role = S
 | GET | `/orders/{id}/ticket` | dono / Staff | — | `200` `{ orderId, status, total, redeemedAt?, pickupNumber?, qrValue, items }` · `404` (não pago) |
 | POST | `/orders/{id}/redeem` | **o próprio aluno** | — | `200` · `409` (retirada não aberta / não pago / já resgatado) · `404` |
 
-O `redeem` é autenticado como o **próprio aluno** — o operador arrasta o "confirmar" no celular
-do cliente. A transição é um `UPDATE ... WHERE Status = 'Paid'` atômico.
+O `redeem` é autenticado como o **próprio aluno** — ele confirma no próprio celular, no balcão,
+com um diálogo de aviso antes. A transição é um `UPDATE ... WHERE Status = 'Paid'` atômico.
 
 ### `/orders/{id}/payment`, `/payments`
 
@@ -336,6 +385,16 @@ do cliente. A transição é um `UPDATE ... WHERE Status = 'Paid'` atômico.
 | POST | `/orders/{orderId}/payment` | dono (rate `payment`) | `201` `{ paymentId, status, pixCode, pixQrCodeBase64, expiresAt, amount }` · `409` · `404` · `502` (MP falhou) |
 | GET | `/payments/{id}` | dono / Staff | `200` (polling) · `404` |
 | POST | `/webhooks/mercadopago` | assinatura MP | `200` sempre (menos `401` assinatura inválida) |
+
+### `/orders/stats`
+
+| Método | Rota | Auth | Respostas |
+|---|---|---|---|
+| GET | `/orders/stats` | **Staff** | `200` `{ salchiposSold, revenue, ticketsToRedeem, ticketsRedeemed, ticketsGenerated, byDay, byShift, redeemByShift }` |
+
+`byDay`/`byShift`/`redeemByShift` alimentam os 3 gráficos da aba **Resumo** — "vendido" conta
+`Paid` + `Redeemed`; turno é o `Shift` cadastrado no perfil de quem comprou, não a janela de
+venda avulsa.
 
 </details>
 
@@ -377,6 +436,7 @@ Auto-transições: staff responde num `Open` → `InProgress`; aluno responde nu
 | `sessions` | `UserId`, `TokenHash` (SHA-256, único), `ExpiresAt`, `LastUsedAt` | guarda **refresh tokens** (hash) |
 | `products` | `Name`, `Description`, `Price` (`DECIMAL(10,2)`), `Available` | seeded: "Salchipão" |
 | `event_settings` | `SalesOpenAt`, `SalesCloseAt`, `RedemptionOpensAt`, `ForcedPhase` | **linha única** |
+| `sale_windows` | `EventSettingsId`, `Label`, `OpensAt`, `ClosesAt`, `Cap`, `Count` | 1-N com `event_settings`; `Count` incrementado atomicamente |
 | `orders` | `UserId`, `Total`, `Status`, `PaymentStatus`, `RedeemedAt?`, `PickupNumber?` | `Total` sempre calculado no servidor |
 | `order_items` | `OrderId`, `ProductId`, `ProductName` (**snapshot**), `UnitPrice` (**snapshot**), `Quantity` | preço/nome congelados no pedido |
 | `payments` | `OrderId`, `ExternalId?` (único), `Status`, `Amount`, `PixCode?`, `PixQrCodeBase64?`, `ExpiresAt` | `ExternalId` nulável — nasce como *stub* |
@@ -457,7 +517,7 @@ A app também roda `Database.Migrate()` no startup (ok para uma instância).
 
 ---
 
-## Deploy
+## Deploy e CI/CD
 
 Produção com **Docker Compose + Caddy** (HTTPS automático via Let's Encrypt) na VM.
 
@@ -475,9 +535,22 @@ Passos (resumo):
 3. `docker compose -f docker-compose.prod.yaml up -d --build`.
 4. Painel do Mercado Pago → cadastrar o webhook `https://api.meusalchipao.online/webhooks/mercadopago`,
    evento `payment`, copiar o secret pro `.env`.
-5. Definir as datas reais do evento (painel Staff) e trocar a senha do usuário Staff semeado.
+5. Criar os usuários Staff direto no banco (via Beekeeper/túnel SSH, não há seed automático nem
+   endpoint de auto-registro) e definir as datas reais do evento no painel Staff.
 
 > O `VITE_API_URL` é **build-time** — entra como build-arg na imagem do frontend.
+
+### CI/CD (GitHub Actions)
+
+`.github/workflows/ci.yml`, dois estágios:
+
+- **CI** — todo push/PR builda backend (`dotnet build`) e frontend (`npm run lint` +
+  `npm run build`) em paralelo. Sem step de teste — não existe suíte ainda.
+- **CD** — `push` em `main`, só depois do CI passar: entra na VM por SSH (chave dedicada só
+  pra isso, guardada como secret do GitHub — direção oposta e sem relação com a deploy key
+  read-only que a própria VM usa pra clonar o repo) e roda
+  `git pull && docker compose -f docker-compose.prod.yaml up -d --build`. Nenhum segredo de
+  aplicação passa pelo GitHub — o `.env` de produção nunca sai da VM.
 
 ---
 
@@ -511,7 +584,7 @@ equivalentes de produção.
 ```
 .
 ├─ backend/
-│  ├─ Program.cs                    # composition root: DI, pipeline, hosted services, seed
+│  ├─ Program.cs                    # composition root: DI, pipeline, hosted services
 │  ├─ Dockerfile · docker-compose.yaml
 │  ├─ Migrations/
 │  ├─ Shared/
@@ -551,24 +624,8 @@ equivalentes de produção.
 | **Snapshot de nome/preço em `OrderItem`** | O pedido é registro histórico — reflete o que foi pago mesmo se o preço mudar depois. |
 | **`Total` calculado no servidor** | O request não tem campo `total`. Senão alguém pediria 50 e mandaria `total: 0.01`. |
 | **`TimeProvider` injetado** | Decisões de fase/expiração dependem de "agora" — injetável = testável. |
-| **Auto-migrate + seed no startup** | `docker compose up` de um banco limpo simplesmente funciona (schema + produto + Staff). |
+| **Auto-migrate no startup** | `docker compose up` de um banco limpo já sobe com schema e dados de catálogo/evento em dia (`HasData` nas migrations). Usuários Staff não são semeados — credencial hardcoded no código é risco de segurança; criação é manual, direto no banco. |
 | **Front: TanStack Query como store** | Estado de servidor com cache, polling e optimistic sem Redux. `useState` só pra UI local. |
 | **Front: shadcn/ui (componentes copiados)** | Código que a gente edita, Tailwind legível — não uma caixa-preta de theming. |
 | **Datas do evento em `America/Sao_Paulo` fixo** | O aluno vê a data certa independente do fuso do aparelho; o backend guarda UTC. |
-
----
-
-## Lacunas conhecidas
-
-- **Testes automatizados + CI** — não existem. Prioridade: `EventPhaseService` (fronteiras de
-  data com `FakeTimeProvider`), `MercadoPagoStatusMap`, idempotência do webhook, cálculo de
-  total, transições do `redeem`, `AssertConfigurationIsValid` dos profiles.
-- **Caminho `approved` do webhook** — validado só até `payment.created` no sandbox; o código
-  `approved → Paid` é determinístico (um teste com fake do client cobre).
-- **`UseForwardedHeaders`** — necessário em prod pro rate-limit por IP funcionar atrás do Caddy.
-- **Reconciliação com o MP** no `SalesCutoffWorker` — varrer `Payment` `Pending` caso um
-  webhook `approved` se perca.
-- **`PickupNumber` sem constraint de unicidade** — `MAX+1` best-effort; o webhook é serializado
-  na prática, colisão seria cosmética.
-- **Health-check com ping ao banco**, **Swagger com auth**, **logging estruturado** (Serilog).
-- **Sem edição de perfil** — `/auth/me` é só leitura; não há `PUT`.
+| **`sale_windows` como lista**, não colunas fixas (`MorningOpensAt`...) | Staff cadastra quantas janelas quiser, com o nome que quiser, sem depender de código novo ou deploy a cada mudança de plano. |
