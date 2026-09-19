@@ -20,7 +20,6 @@ function badgeText(phase: Phase): string {
   }
 }
 
-/** Card-herói da campanha. Muda o selo conforme a fase; datas sempre visíveis. */
 export function EventHero({ phase }: { phase: Phase }) {
   const { snapshot } = phase
 

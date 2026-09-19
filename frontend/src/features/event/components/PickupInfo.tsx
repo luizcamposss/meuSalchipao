@@ -4,7 +4,6 @@ import { dayOfMonth, longDate, monthShort, weekdayShort } from '@/lib/format'
 
 import type { Phase } from '../hooks'
 
-/** Card branco do dia da retirada. */
 export function PickupInfo({ phase }: { phase: Phase }) {
   const at = phase.snapshot.redemptionOpensAt
 

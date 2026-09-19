@@ -58,7 +58,12 @@ const FORCED_OPTIONS: { value: ForcedPhase; label: string }[] = [
   { value: 'Closed', label: 'Forçar fechado' },
 ]
 
-// ---- resumo do evento ---------------------------------------------
+const PHASE_LABEL: Record<EventPhaseSnapshot['phase'], string> = {
+  BeforeSales: 'Antes da venda',
+  SalesOpen: 'Venda aberta',
+  RedemptionOnly: 'Só retirada',
+  SalesClosed: 'Vendas encerradas',
+}
 
 const ACCENT = {
   sales: 'bg-primary/10 text-primary',
@@ -139,7 +144,7 @@ function SummaryDashboard() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-36 rounded-2xl" />
           ))}
@@ -189,7 +194,7 @@ function SummaryDashboard() {
         </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         <StatCard
           icon={ShoppingBagIcon}
           value={stats.salchiposSold}
@@ -259,8 +264,6 @@ function SummaryDashboard() {
     </div>
   )
 }
-
-// ---- fila do SAC ----------------------------------------------------
 
 function QueueItem({
   t,
@@ -386,15 +389,13 @@ function SacQueue() {
           <TicketDetail ticketId={shownId} />
         ) : (
           <div className="grid h-full min-h-[20rem] place-items-center rounded-3xl bg-card text-sm text-muted-foreground shadow-sm">
-            Selecione um chamado à esquerda.
+            Selecione um chamado na lista.
           </div>
         )}
       </div>
     </div>
   )
 }
-
-// ---- controle do evento ------------------------------------------
 
 function EventForm({ snapshot }: { snapshot: EventPhaseSnapshot }) {
   const update = useUpdateEvent()
@@ -440,7 +441,7 @@ function EventForm({ snapshot }: { snapshot: EventPhaseSnapshot }) {
       className="flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-sm"
     >
       <p className="rounded-xl bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
-        Fase agora: <b className="text-foreground">{snapshot.phase}</b> · horários
+        Fase agora: <b className="text-foreground">{PHASE_LABEL[snapshot.phase]}</b> · horários
         em horário de Brasília
       </p>
 
@@ -542,8 +543,6 @@ function EventControl() {
   }
   return <EventForm snapshot={data} />
 }
-
-// ---- venda avulsa do dia -------------------------------------------
 
 function SaleWindowMeter({ cap, remaining }: { cap: number; remaining: number }) {
   const pct = cap > 0 ? Math.min(100, Math.round(((cap - remaining) / cap) * 100)) : 0
@@ -888,8 +887,6 @@ function SaleWindowsPanel() {
   )
 }
 
-// ---- contas (reset de senha) ---------------------------------------
-
 function randomPassword() {
   const bytes = crypto.getRandomValues(new Uint8Array(6))
   return Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 10)
@@ -998,8 +995,6 @@ function ResetPasswordForm() {
     </form>
   )
 }
-
-// ---- página ------------------------------------------------------
 
 const TABS = [
   { value: 'summary', label: 'Resumo' },

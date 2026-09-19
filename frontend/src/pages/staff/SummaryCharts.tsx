@@ -9,13 +9,11 @@ function shiftLabel(shift: Shift): string {
   return shiftOptions.find((o) => o.value === shift)?.label ?? shift
 }
 
-/** "2026-09-08" -> "08/09" sem passar por Date (evita deslocamento de fuso). */
 function dayLabel(iso: string): string {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
 }
 
-/** Topo do eixo Y: um número "redondo" logo acima do pico. */
 function niceCeil(value: number): number {
   if (value <= 5) return Math.max(1, Math.ceil(value))
   if (value <= 10) return Math.ceil(value / 2) * 2
@@ -24,8 +22,6 @@ function niceCeil(value: number): number {
   const step = n <= 1.5 ? 1.5 : n <= 2 ? 2 : n <= 3 ? 3 : n <= 5 ? 5 : 10
   return Math.round(step * pow)
 }
-
-// ---- gráfico: salchipões por dia --------------------------------------
 
 export function SalesBarChart({ data }: { data: DailySales[] }) {
   const [hover, setHover] = React.useState<number | null>(null)
@@ -47,22 +43,18 @@ export function SalesBarChart({ data }: { data: DailySales[] }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-3">
-        {/* eixo Y */}
         <div className="flex w-6 shrink-0 flex-col justify-between py-0.5 text-right text-[0.625rem] tabular-nums text-muted-foreground">
           <span>{top}</span>
           <span>0</span>
         </div>
 
-        {/* área do plot */}
         <div className="relative min-w-0 flex-1">
-          {/* linhas de grade — recessivas */}
           <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
             <div className="border-t border-border/45" />
             <div className="border-t border-border/25" />
             <div className="border-t border-border" />
           </div>
 
-          {/* barras */}
           <div className="relative flex h-44 items-end gap-[3px]">
             {rows.map((r, i) => {
               const h = top === 0 ? 0 : (r.salchipos / top) * 100
@@ -77,7 +69,6 @@ export function SalesBarChart({ data }: { data: DailySales[] }) {
                   onBlur={() => setHover((c) => (c === i ? null : c))}
                   className="group relative flex h-full flex-1 flex-col justify-end outline-none"
                 >
-                  {/* rótulo direto só no maior dia (ou no que estiver em foco) */}
                   {(i === maxIdx || active) && r.salchipos > 0 ? (
                     <span className="mx-auto mb-1 text-[0.625rem] font-semibold tabular-nums text-foreground">
                       {r.salchipos}
@@ -107,7 +98,6 @@ export function SalesBarChart({ data }: { data: DailySales[] }) {
         </div>
       </div>
 
-      {/* eixo X */}
       <div className="flex gap-3">
         <div className="w-6 shrink-0" />
         <div className="flex min-w-0 flex-1 gap-[3px]">
@@ -129,8 +119,6 @@ export function SalesBarChart({ data }: { data: DailySales[] }) {
     </div>
   )
 }
-
-// ---- gráfico: salchipões por turno --------------------------------
 
 const SHIFT_ORDER: Shift[] = ['Morning', 'Afternoon', 'Evening']
 
@@ -234,8 +222,6 @@ export function ShiftBarChart({ data }: { data: ShiftSales[] }) {
     </div>
   )
 }
-
-// ---- medidor: resgate no balcão -------------------------------------
 
 export function RedeemMeter({
   redeemed,

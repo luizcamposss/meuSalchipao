@@ -11,7 +11,6 @@ export const sacApi = {
   listTickets: (signal?: AbortSignal) =>
     api.get<SacTicketResponse[]>('/sac/tickets', { signal }),
 
-  // Staff: fila completa
   listAll: (status?: SacTicketStatus, signal?: AbortSignal) =>
     api.get<SacTicketResponse[]>('/sac/tickets/all', {
       query: status ? { status } : undefined,
@@ -27,7 +26,6 @@ export const sacApi = {
   addMessage: (id: string, message: string) =>
     api.post<SacMessageResponse>(`/sac/tickets/${id}/messages`, { message }),
 
-  // Staff: muda status / prioridade
   updateTicket: (id: string, body: UpdateTicketRequest) =>
     api.patch<SacTicketResponse>(`/sac/tickets/${id}`, body),
 }

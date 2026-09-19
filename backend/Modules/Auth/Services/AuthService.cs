@@ -178,8 +178,6 @@ public class AuthService : IAuthService
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
 
-        // Derruba as sessões existentes: a senha antiga não deve continuar
-        // valendo pra sessões já abertas depois de um reset feito pelo staff.
         var sessions = await _context.Sessions
             .Where(s => s.UserId == user.Id)
             .ToListAsync(ct);

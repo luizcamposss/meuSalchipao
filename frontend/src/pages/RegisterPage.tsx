@@ -67,7 +67,6 @@ export function RegisterPage() {
       return
     }
 
-    // conta criada: entra direto; se o login falhar, cai na tela de login
     try {
       await login.mutateAsync({
         email: values.email,

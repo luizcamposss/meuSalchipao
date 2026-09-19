@@ -1,15 +1,3 @@
-/**
- * Tipos que espelham os DTOs do backend (ASP.NET Core).
- * Fonte: README.md (raiz) + os records em backend/Modules/ * /Contracts.
- *
- * Convenções do backend:
- *  - JSON em camelCase (padrão do ASP.NET).
- *  - enums serializados como STRING no nome do valor ("Student", "Paid", ...).
- *  - datas em ISO 8601 UTC (string). Converter para Date só no render.
- */
-
-// ---- enums (string unions) -----------------------------------------------
-
 export type Role = 'Undefined' | 'Student' | 'Staff'
 export type Shift = 'Undefined' | 'Morning' | 'Afternoon' | 'Evening'
 
@@ -32,8 +20,6 @@ export type EventPhaseName =
 
 export type SacTicketStatus = 'Open' | 'InProgress' | 'Resolved' | 'Closed'
 export type SacTicketPriority = 'Low' | 'Normal' | 'High'
-
-// ---- auth --------------------------------------------------------------
 
 export interface RegisterRequest {
   name: string
@@ -59,7 +45,6 @@ export interface LoginRequest {
   password: string
 }
 
-/** corpo de POST /auth/login e /auth/refresh */
 export interface LoginResponse {
   id: string
   name: string
@@ -68,7 +53,6 @@ export interface LoginResponse {
   shift: Shift
 }
 
-/** corpo de GET /auth/me */
 export interface Me {
   id: string
   name: string
@@ -90,8 +74,6 @@ export interface StaffResetPasswordResponse {
   enrollment: string
 }
 
-// ---- catalog ---------------------------------------------------------
-
 export interface Product {
   id: string
   name: string
@@ -100,8 +82,6 @@ export interface Product {
   imageUrl: string | null
   available: boolean
 }
-
-// ---- event ---------------------------------------------------------
 
 export interface SaleWindowResponse {
   id: string
@@ -146,8 +126,6 @@ export interface UpdateSaleWindowRequest {
   cap: number
 }
 
-// ---- orders --------------------------------------------------------
-
 export interface CreateOrderItem {
   productId: string
   quantity: number
@@ -184,40 +162,27 @@ export interface TicketResponse {
   items: OrderItemResponse[]
 }
 
-/** uma barra do gráfico "salchipões por dia" (dia em horário de Brasília) */
 export interface DailySales {
-  /** "2026-09-08" */
   day: string
   salchipos: number
   revenue: number
 }
 
-/** uma barra do gráfico "salchipões por turno" (turno de quem comprou) */
 export interface ShiftSales {
   shift: Shift
   salchipos: number
   revenue: number
 }
 
-/** GET /orders/stats — números do evento para o painel da equipe (Staff). */
 export interface OrderStats {
-  /** salchipões vendidos (soma das quantidades de pedidos pagos) */
   salchiposSold: number
-  /** total em reais dos pedidos pagos */
   revenue: number
-  /** tickets pagos ainda não resgatados */
   ticketsToRedeem: number
-  /** tickets já resgatados no balcão */
   ticketsRedeemed: number
-  /** tickets gerados ao todo (pagos + resgatados) */
   ticketsGenerated: number
-  /** vendas por dia, em ordem crescente */
   byDay: DailySales[]
-  /** vendas por turno de quem comprou */
   byShift: ShiftSales[]
 }
-
-// ---- payments ----------------------------------------------------
 
 export interface PaymentResponse {
   paymentId: string
@@ -227,8 +192,6 @@ export interface PaymentResponse {
   expiresAt: string
   amount: number
 }
-
-// ---- sac -------------------------------------------------------
 
 export interface CreateTicketRequest {
   subject: string
@@ -264,13 +227,10 @@ export interface SacTicketResponse {
   createdAt: string
   updatedAt: string
   messages: SacMessageResponse[]
-  /** dados do aluno — vêm no GET por id e na fila (Staff) */
   userName?: string | null
   userEmail?: string | null
   userEnrollment?: string | null
 }
-
-// ---- erro (RFC 7807 ProblemDetails) --------------------------
 
 export interface ProblemDetails {
   type?: string

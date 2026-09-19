@@ -1,15 +1,5 @@
 import type { ProblemDetails } from '@/types/api'
 
-/**
- * Cliente HTTP único do app.
- *
- * - manda sempre o cookie (`credentials: 'include'`); nenhum token passa por JS.
- * - em 401: tenta `POST /auth/refresh` UMA vez, repete a request original.
- *   Se o refresh falhar, dispara o handler de logout (registrado pelo app) e
- *   propaga o erro.
- * - erros viram `ApiError` com o `title`/`detail` do ProblemDetails do backend.
- */
-
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 
 export class ApiError extends Error {
@@ -23,21 +13,16 @@ export class ApiError extends Error {
     this.problem = problem
   }
 
-  /** erros de validação por campo (RFC 7807 `errors`), quando houver */
   get fieldErrors(): Record<string, string[]> | undefined {
     return this.problem?.errors
   }
 }
-
-// --- handler de logout, injetado pelo app (evita api.ts depender do router) ---
 
 let onUnauthorized: (() => void) | null = null
 
 export function setUnauthorizedHandler(fn: (() => void) | null) {
   onUnauthorized = fn
 }
-
-// --- refresh coalescido: N chamadas em 401 disparam UM refresh só -----------
 
 let refreshInFlight: Promise<boolean> | null = null
 
@@ -54,15 +39,11 @@ function refreshSession(): Promise<boolean> {
   return refreshInFlight
 }
 
-// --- núcleo -------------------------------------------------------------
-
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  /** objeto serializado como JSON; pule para GET */
   body?: unknown
   signal?: AbortSignal
   query?: Record<string, string | number | boolean | undefined | null>
-  /** pula a dança de refresh (usado pelas próprias rotas de auth) */
   skipAuthRefresh?: boolean
 }
 
@@ -94,7 +75,7 @@ async function toApiError(res: Response): Promise<ApiError> {
     const data = await res.json()
     if (data && typeof data === 'object') problem = data as ProblemDetails
   } catch {
-    // corpo vazio ou não-JSON
+    void 0
   }
   const message =
     problem?.title ?? problem?.detail ?? res.statusText ?? `HTTP ${res.status}`
@@ -128,8 +109,6 @@ export async function apiFetch<T>(
   if (!res.ok) throw await toApiError(res)
   return parse<T>(res)
 }
-
-// --- açúcar -----------------------------------------------------------
 
 export const api = {
   get: <T>(path: string, opts?: Omit<RequestOptions, 'method' | 'body'>) =>

@@ -1,4 +1,3 @@
-/** Tela placeholder para as abas que ainda não têm implementação. */
 export function StubScreen({ title }: { title: string }) {
   return (
     <div className="grid gap-2">

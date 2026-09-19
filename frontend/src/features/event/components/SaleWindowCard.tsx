@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { formatTime } from '@/lib/format'
 import type { SaleWindowResponse } from '@/types/api'
 
-/** Card-destaque da venda avulsa (janela extra aberta fora da fase normal). */
 export function SaleWindowCard({ window: w }: { window: SaleWindowResponse }) {
   return (
     <section className="rounded-2xl bg-card p-5 shadow-sm ring-1 ring-flag-yellow/40">

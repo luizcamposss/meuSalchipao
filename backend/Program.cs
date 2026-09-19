@@ -42,7 +42,6 @@ builder.Services.AddDbContext<AppDbContext>(opts =>
 builder.Services
     .AddControllers()
     .AddJsonOptions(o =>
-        // Serialize/accept enums as their names ("Student", "Pending") instead of ints.
         o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddProblemDetails();
@@ -106,13 +105,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Atrás do Caddy (rede interna do compose) o IP/scheme reais vêm nos headers
-// X-Forwarded-*. Sem isto o rate-limit por IP veria só o IP do proxy.
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    // a API só é alcançável pelo Caddy; confiamos em qualquer proxy da rede interna
     o.KnownNetworks.Clear();
     o.KnownProxies.Clear();
 });
@@ -171,9 +167,6 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 
-    // Staff de bootstrap. Cada perfil é semeado só se o e-mail ainda não existir,
-    // então funciona tanto num banco novo quanto num que já tinha o staff antigo.
-    // Trocar as senhas depois do primeiro login (ver README).
     var seedStaff = new[]
     {
         (Name: "Equipe Salchipão", Email: "staff@salchipao.com", Enrollment: "STAFF001", Shift: Shift.Morning, Password: "staff01!"),

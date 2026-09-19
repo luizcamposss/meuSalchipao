@@ -88,7 +88,6 @@ export function TicketPage() {
             </p>
           </div>
 
-          {/* serrilha */}
           <div className="relative h-0">
             <div className="absolute -left-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-background" />
             <div className="absolute -right-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-background" />

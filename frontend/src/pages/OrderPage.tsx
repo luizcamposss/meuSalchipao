@@ -94,7 +94,7 @@ function PixPayment({
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // clipboard bloqueado — ignora
+      void 0
     }
   }
 

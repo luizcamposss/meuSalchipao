@@ -11,10 +11,6 @@ export const paymentKeys = {
   status: (paymentId: string) => ['payment', paymentId] as const,
 }
 
-/**
- * "Get or create" da cobrança Pix do pedido: faz o POST uma vez e cacheia
- * (o backend devolve a cobrança viva se já existir). Não refaz sozinho.
- */
 export function useOrderCharge(orderId: string) {
   return useQuery({
     queryKey: paymentKeys.charge(orderId),
@@ -25,7 +21,6 @@ export function useOrderCharge(orderId: string) {
   })
 }
 
-/** Poll do status do pagamento; para quando chega num estado final. */
 export function usePaymentStatus(paymentId: string | undefined) {
   return useQuery({
     queryKey: paymentKeys.status(paymentId ?? 'none'),
