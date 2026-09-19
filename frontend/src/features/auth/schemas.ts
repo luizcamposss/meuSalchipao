@@ -6,7 +6,6 @@ export const loginSchema = z.object({
 })
 export type LoginValues = z.infer<typeof loginSchema>
 
-/** turnos oferecidos no cadastro (o backend tem Undefined=0, que não expomos) */
 export const shiftOptions = [
   { value: 'Morning', label: 'Manhã' },
   { value: 'Afternoon', label: 'Tarde' },

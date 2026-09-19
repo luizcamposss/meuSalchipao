@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 
 import { TicketDetail } from './TicketDetail'
 
-/** Rota de deep-link para um chamado. Na fila normal o detalhe abre no painel lado a lado. */
 export function StaffTicketPage() {
   const { ticketId = '' } = useParams()
 

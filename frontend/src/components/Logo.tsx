@@ -1,7 +1,6 @@
 import logoUrl from '@/assets/logo-stacked.webp'
 import { cn } from '@/lib/utils'
 
-/** Marca "Meu Salchipão" — emblema + texto empilhado. Largura via className. */
 export function Logo({ className }: { className?: string }) {
   return (
     <img

@@ -3,7 +3,6 @@ import { ClockIcon } from 'lucide-react'
 import { formatTime } from '@/lib/format'
 import type { SaleWindowResponse } from '@/types/api'
 
-/** Selo de canto com a cota da venda avulsa — usado no card do produto. */
 export function SaleWindowBadge({ window: w }: { window: SaleWindowResponse }) {
   return (
     <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-primary/10 py-1.5 pl-2.5 pr-3 text-primary">

@@ -8,10 +8,6 @@ export const eventKeys = {
   snapshot: ['event'] as const,
 }
 
-/**
- * Fase do evento. `refetchInterval` mantém a fase e o "abre em X" vivos sem
- * precisar recarregar a página (o backend troca de fase por data, sem deploy).
- */
 export function useEvent() {
   return useQuery({
     queryKey: eventKeys.snapshot,
@@ -31,12 +27,6 @@ export function useUpdateEvent() {
   })
 }
 
-/**
- * Mesma chave de `useEvent`, mas com polling mais rápido — usada no painel
- * Staff pra acompanhar as vagas das janelas quase em tempo real. Como é a
- * mesma queryKey, o TanStack usa o intervalo mais curto enquanto essa tela
- * estiver montada, sem duplicar requisição.
- */
 export function useEventLive() {
   return useQuery({
     queryKey: eventKeys.snapshot,
@@ -94,11 +84,9 @@ const MODE_BY_PHASE: Record<EventPhaseSnapshot['phase'], PhaseMode> = {
 export interface Phase {
   mode: PhaseMode
   snapshot: EventPhaseSnapshot
-  /** relógio do servidor (usar em vez de `new Date()` para countdown) */
   now: string
 }
 
-/** Deriva a fase a partir do snapshot. `phase` é `null` enquanto carrega ou em erro. */
 export function usePhase() {
   const query = useEvent()
   const phase: Phase | null = query.data

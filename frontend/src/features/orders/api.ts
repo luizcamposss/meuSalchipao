@@ -13,7 +13,6 @@ export const ordersApi = {
   list: (signal?: AbortSignal) =>
     api.get<OrderResponse[]>('/orders', { signal }),
 
-  // Staff: números do evento
   stats: (signal?: AbortSignal) =>
     api.get<OrderStats>('/orders/stats', { signal }),
 

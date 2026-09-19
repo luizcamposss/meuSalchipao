@@ -1,4 +1,3 @@
-/** Faixa tricolor da bandeira do RS: vermelho, verde, amarelo. */
 export function TricolorBar() {
   return (
     <div className="flex h-1 w-full shrink-0" aria-hidden>

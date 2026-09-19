@@ -1,9 +1,5 @@
 import * as React from 'react'
 
-/**
- * useState que sobrevive à navegação (e a um reload da aba) guardando o valor
- * em sessionStorage. Cai no `initial` se o storage estiver indisponível.
- */
 export function usePersistentState<T>(
   key: string,
   initial: T,
@@ -21,7 +17,7 @@ export function usePersistentState<T>(
     try {
       sessionStorage.setItem(key, JSON.stringify(value))
     } catch {
-      // storage bloqueado / cheio — ignora
+      void 0
     }
   }, [key, value])
 

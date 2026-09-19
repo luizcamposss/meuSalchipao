@@ -17,7 +17,6 @@ export function useOrders() {
   })
 }
 
-/** Staff: números do evento. Atualiza sozinho a cada 15s. */
 export function useOrderStats() {
   return useQuery({
     queryKey: orderKeys.stats,

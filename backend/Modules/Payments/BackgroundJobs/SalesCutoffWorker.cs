@@ -32,11 +32,10 @@ public class SalesCutoffWorker : BackgroundService
             }
             catch (OperationCanceledException)
             {
-                break; // app is shutting down
+                break;
             }
             catch (Exception ex)
             {
-                // One bad sweep must not kill the loop.
                 _logger.LogError(ex, "SalesCutoffWorker sweep failed");
             }
         }
@@ -52,11 +51,6 @@ public class SalesCutoffWorker : BackgroundService
         var now = _clock.GetUtcNow().UtcDateTime;
         var phase = await events.GetSnapshotAsync(ct);
 
-        // "Fechado" precisa considerar as janelas de venda avulsa também — não só
-        // o SalesCloseAt regular. Sem isso, todo pedido feito numa venda do dia
-        // (fora do período regular, que é o motivo dela existir) era cancelado
-        // pelo sweep em até 2 minutos, mesmo com o Pix pago em seguida: o webhook
-        // chega depois com o pedido já em Cancelled e não reverte o status.
         var salesClosed = !phase.SalesOpen;
 
         var orders = await db.Orders

@@ -11,7 +11,6 @@ function FullScreen() {
   )
 }
 
-/** Portão do miolo logado. Sem sessão -> /login, guardando a rota de origem. */
 export function RequireAuth() {
   const { data: me, isLoading } = useMe()
   const location = useLocation()
@@ -23,7 +22,6 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** Rotas públicas (login/cadastro). Já logado -> Home. */
 export function PublicOnly() {
   const { data: me, isLoading } = useMe()
 
@@ -32,7 +30,6 @@ export function PublicOnly() {
   return <Outlet />
 }
 
-/** Portão da área de Staff. Aninhado dentro do RequireAuth. */
 export function RequireStaff() {
   const { data: me, isLoading } = useMe()
 

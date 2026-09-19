@@ -14,7 +14,6 @@ export function useProducts() {
   })
 }
 
-/** O evento tem um único produto (o Salchipão). Atalho pra ele. */
 export function useSalchipao() {
   const query = useProducts()
   return { ...query, product: query.data?.[0] ?? null }

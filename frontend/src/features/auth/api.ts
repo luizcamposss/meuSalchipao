@@ -10,10 +10,8 @@ import type {
 } from '@/types/api'
 
 export const authApi = {
-  /** GET /auth/me — fluxo normal (401 -> refresh -> retry no boot). */
   me: (signal?: AbortSignal) => api.get<Me>('/auth/me', { signal }),
 
-  /** rotas que estabelecem/derrubam a sessão: sem a dança de refresh. */
   login: (body: LoginRequest) =>
     api.post<LoginResponse>('/auth/login', body, { skipAuthRefresh: true }),
 
@@ -23,7 +21,6 @@ export const authApi = {
   logout: () =>
     api.post<void>('/auth/logout', undefined, { skipAuthRefresh: true }),
 
-  /** Staff redefine a senha de um aluno pelo e-mail. */
   staffResetPassword: (body: StaffResetPasswordRequest) =>
     api.post<StaffResetPasswordResponse>('/auth/staff/reset-password', body),
 }

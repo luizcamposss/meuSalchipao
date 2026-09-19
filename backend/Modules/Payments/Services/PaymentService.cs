@@ -62,11 +62,6 @@ public class PaymentService : IPaymentService
 
             var ttlExpiry = now.AddMinutes(PixTtlMinutes);
 
-            // O corte não pode olhar só pro fechamento "regular" (SalesCloseAt):
-            // numa venda avulsa do dia (walk-up sale window) essa data já passou,
-            // então o corte tem que respeitar até quando a janela aberta permite
-            // vender — senão o pedido nasce com prazo de pagamento no passado e a
-            // Mercado Pago rejeita a criação do Pix (date_of_expiration no passado).
             var cutoffCandidates = new List<DateTime> { phase.SalesCloseAt };
             cutoffCandidates.AddRange(phase.SaleWindows.Where(w => w.Open).Select(w => w.ClosesAt));
             var cutoff = new DateTimeOffset(cutoffCandidates.Max(), TimeSpan.Zero);
@@ -164,17 +159,10 @@ public class PaymentService : IPaymentService
             if (newStatus == PaymentStatus.Approved
                 && order.Status is not (OrderStatus.Paid or OrderStatus.Redeemed))
             {
-                // Cobre tanto o caminho normal (pedido ainda AwaitingPayment) quanto
-                // a corrida com o SalesCutoffWorker: se o pedido já tinha sido
-                // cancelado (ex.: sweep por fechamento de janela) mas a Mercado Pago
-                // confirma o pagamento depois, o pedido tem que virar Paid mesmo
-                // assim — dinheiro aprovado nunca pode terminar em "Cancelado".
                 order.PaymentStatus = PaymentStatus.Approved;
                 order.Status = OrderStatus.Paid;
                 order.UpdatedAt = now;
 
-                // Número curto de retirada, sequencial (best-effort — sem
-                // constraint de unicidade; o webhook é serializado na prática).
                 var lastPickup = await _context.Orders
                     .Where(o => o.PickupNumber != null)
                     .MaxAsync(o => (int?)o.PickupNumber, ct);

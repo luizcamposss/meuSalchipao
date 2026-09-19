@@ -4,10 +4,6 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { BottomNav } from '@/components/BottomNav'
 import { TricolorBar } from '@/components/TricolorBar'
 
-/**
- * Casca mobile do miolo logado: faixa tricolor no topo, conteúdo da rota com
- * uma transição de entrada, e a barra de abas fixa embaixo.
- */
 export function AppLayout() {
   const location = useLocation()
 

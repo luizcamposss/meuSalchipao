@@ -1,7 +1,6 @@
 import * as React from 'react'
 
 type Props = {
-  /** alvo ISO (UTC) */
   to: string
   onExpire?: () => void
   className?: string
@@ -11,13 +10,11 @@ function remainingMs(to: string) {
   return Math.max(0, new Date(to).getTime() - Date.now())
 }
 
-/** Contagem regressiva mm:ss até `to`. Chama `onExpire` uma vez ao zerar. */
 export function Countdown({ to, onExpire, className }: Props) {
   const [ms, setMs] = React.useState(() => remainingMs(to))
   const [prevTo, setPrevTo] = React.useState(to)
   const firedRef = React.useRef(false)
 
-  // resync quando o alvo muda (novo código gerado)
   if (to !== prevTo) {
     setPrevTo(to)
     setMs(remainingMs(to))
