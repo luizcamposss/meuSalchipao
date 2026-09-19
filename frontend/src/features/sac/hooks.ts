@@ -14,12 +14,6 @@ export const sacKeys = {
   queue: (status?: SacTicketStatus) => ['sac', 'queue', status ?? 'all'] as const,
 }
 
-// ---- aluno: chat único --------------------------------------------------
-
-/**
- * Chat único: usa o ticket mais recente que não esteja fechado (a lista já vem
- * ordenada por UpdatedAt desc). `null` = ainda não há conversa.
- */
 export function useSacThread() {
   const list = useQuery({
     queryKey: sacKeys.tickets,
@@ -62,8 +56,6 @@ export function useSendSacMessage(activeId: string | null) {
     },
   })
 }
-
-// ---- staff ------------------------------------------------------------
 
 export function useSacQueue(status?: SacTicketStatus) {
   return useQuery({

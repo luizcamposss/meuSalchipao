@@ -4,10 +4,6 @@ import * as React from 'react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
-/**
- * Input de senha com botão mostrar/ocultar. Repassa todas as props do <input>
- * (RHF injeta value/onChange/onBlur/name/ref via {...field}).
- */
 export const PasswordInput = React.forwardRef<
   HTMLInputElement,
   Omit<React.ComponentProps<'input'>, 'type'>

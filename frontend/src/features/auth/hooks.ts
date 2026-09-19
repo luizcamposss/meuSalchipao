@@ -6,10 +6,6 @@ export const authKeys = {
   me: ['auth', 'me'] as const,
 }
 
-/**
- * Sessão atual. `data` indefinido = deslogado (a query dá erro em 401 e
- * `retry: false` impede repetir). Os guards de rota leem isto.
- */
 export function useMe() {
   return useQuery({
     queryKey: authKeys.me,
@@ -24,7 +20,6 @@ export function useLogin() {
   return useMutation({
     mutationFn: authApi.login,
     onSuccess: () => {
-      // revalida tudo com a sessão nova; o /auth/me passa a trazer o perfil completo
       void qc.invalidateQueries()
     },
   })

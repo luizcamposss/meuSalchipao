@@ -101,7 +101,6 @@ public class OrderService : IOrderService
 
     public async Task<OrderStatsResponse> GetStatsAsync(CancellationToken ct)
     {
-        // "Vendido" = pedido que chegou a pago (Paid) ou já foi resgatado (Redeemed).
         var salchiposSold = await _context.OrderItems
             .AsNoTracking()
             .Where(i => i.Order.Status == OrderStatus.Paid || i.Order.Status == OrderStatus.Redeemed)
@@ -120,9 +119,6 @@ public class OrderService : IOrderService
             .AsNoTracking()
             .CountAsync(o => o.Status == OrderStatus.Redeemed, ct);
 
-        // Vendas por dia. Poucos pedidos num evento escolar — agrega em memória
-        // pra poder converter o instante UTC pro dia no fuso de Brasília sem
-        // depender de tradução SQL de fuso.
         var paidRows = await _context.Orders
             .AsNoTracking()
             .Where(o => o.Status == OrderStatus.Paid || o.Status == OrderStatus.Redeemed)
@@ -135,7 +131,7 @@ public class OrderService : IOrderService
             })
             .ToListAsync(ct);
 
-        var brasilia = TimeSpan.FromHours(-3); // sem horário de verão desde 2019
+        var brasilia = TimeSpan.FromHours(-3);
         var byDay = paidRows
             .GroupBy(r => DateOnly.FromDateTime(r.CreatedAt + brasilia))
             .Select(g => new DailySales(g.Key, g.Sum(r => r.Qty), g.Sum(r => r.Total)))

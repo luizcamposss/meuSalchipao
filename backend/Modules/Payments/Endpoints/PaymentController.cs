@@ -11,7 +11,6 @@ namespace backend.Modules.Payments.Endpoints;
 [Authorize]
 public class PaymentController(IPaymentService payments) : ControllerBase
 {
-    // Create (or return the live) Pix charge for an order.
     [EnableRateLimiting("payment")]
     [HttpPost("orders/{orderId:guid}/payment")]
     public async Task<ActionResult<PaymentResponse>> Create(Guid orderId, CancellationToken ct)
@@ -20,7 +19,6 @@ public class PaymentController(IPaymentService payments) : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = result.PaymentId }, result);
     }
 
-    // The client polls this until Status is Approved.
     [HttpGet("payments/{id:guid}")]
     public async Task<ActionResult<PaymentResponse>> Get(Guid id, CancellationToken ct)
     {

@@ -6,7 +6,6 @@ import { TricolorBar } from '@/components/TricolorBar'
 import { Button } from '@/components/ui/button'
 import { useLogout } from '@/features/auth/hooks'
 
-/** Casca da área de Staff — layout de desktop, largo, sem barra de abas do aluno. */
 export function StaffLayout() {
   const logout = useLogout()
   const navigate = useNavigate()

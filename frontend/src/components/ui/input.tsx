@@ -2,10 +2,6 @@ import type * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-/**
- * Input do app. Diferenças do default shadcn: mais alto (h-12) e fundo branco
- * (bg-card) — alvo de toque confortável no mobile, sobre o fundo creme.
- */
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
   return (
     <input
